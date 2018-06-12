@@ -11,7 +11,7 @@ int main()
 
 	// —∞’“À˘”–pngÕº∆¨
 	std::vector<std::string> pngfiles;
-	auto all_files = path::walk(path::curdir());
+	auto all_files = path::walk("encrypt\\"+path::curdir());
 	for (auto filename : all_files)
 	{
 		if (path::splitext(filename)[1] == ".png")

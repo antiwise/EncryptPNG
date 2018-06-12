@@ -78,7 +78,7 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		for (auto ch : BLOCK_HEAD) block_info.put(ch);
 
 		// 写入文件数据
-		std::string out_path = path::splitext(filename)[0] + ".epng";
+		std::string out_path = path::splitext(filename)[0] + ".png";//.epng
 		out_file.open(out_path, std::ios::binary);
 		if (!out_file.is_open())
 		{
