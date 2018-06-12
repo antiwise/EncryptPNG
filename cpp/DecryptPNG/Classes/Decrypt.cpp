@@ -34,18 +34,23 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		{
 			if (block_head[i] != BLOCK_HEAD[i])
 			{
-				std::cerr << "密钥错误，解密" << filename << " 失败！" << std::endl;
+				std::cerr << "===>密钥错误，解密" << filename << " 失败！<===" << std::endl;
 				return;
 			}
 		}
 
-		std::ofstream out_file(path::splitext(filename)[0] + ".png", std::ios::binary);
+		//auto pngName = filename.find_last_of("\\") + 1;
+		std::string out_path = "\\encrypt\\" + path::splitext(filename)[2]; // + path::splitext(filename)[0] + ".png";//.epng
+		auto absolute_path = path::curdir();
+		out_path = absolute_path + out_path;
+
+		std::ofstream out_file(out_path, std::ios::binary);
 		if (!out_file.is_open())
 		{
-			std::cerr << "创建" << path::splitext(filename)[1] << ".png" << " 失败！" << std::endl;
+			std::cerr << "--->创建" << path::splitext(filename)[0] << ".png" << " 失败！" << std::endl;
 			continue;
 		}
-
+		std::cerr << "-->正在解密" << path::splitext(filename)[0] << ".png" << " 文件" << std::endl;
 		// 写入文件头
 		WriteToSteam(HEAD_DATA, sizeof(HEAD_DATA), out_file);
 
@@ -94,5 +99,7 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 				read_size += block.size + CRC_SIZE;
 			}
 		}
+		std::cerr << "解密" << path::splitext(filename)[0] << ".png" << " 文件完成" << std::endl;
+		//out_file.close();
 	}
 }

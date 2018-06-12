@@ -64,6 +64,8 @@ void WriteFileData(const std::string &filename, std::ofstream &outstream, std::s
 			StreamMove(outstream, block_data, block_size + CRC_SIZE);
 		}
 	}
+
+	file.close();
 }
 
 // 加密PNG图片
@@ -78,7 +80,11 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		for (auto ch : BLOCK_HEAD) block_info.put(ch);
 
 		// 写入文件数据
-		std::string out_path = path::splitext(filename)[0] + ".png";//.epng
+		auto pngName = filename.find_last_of("\\")+1;
+		std::string out_path = "\\encrypted\\" + filename.substr(pngName); // + path::splitext(filename)[0] + ".png";//.epng
+		auto absolute_path = path::curdir();
+		out_path = absolute_path + out_path;
+
 		out_file.open(out_path, std::ios::binary);
 		if (!out_file.is_open())
 		{
@@ -88,6 +94,7 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 			std::cerr << "创建" << filename << " 失败！" << std::endl;
 			continue;
 		}
+		
 		WriteFileData(filename, out_file, block_info);
 
 		// 记录起始位置
@@ -101,8 +108,8 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		StreamMove(out_file, block_info, uint32_t(block_info.tellp() - block_info.tellg()));
 		for (unsigned int i = 0; i < sizeof(uint64_t); ++i) out_file.put(user_data[i]);
 
-		std::cout << "已生成：" << out_path.c_str() << std::endl;
-
+		std::cout << "==>加密完成：" << out_path.c_str() << std::endl;
+		
 		out_file.close();
 		block_info.str("");
 		block_info.clear();

@@ -22,16 +22,21 @@ namespace path
 	}
 
 	/**
-	 * 文件名分解
-	 */
-	static std::array<std::string, 2> splitext(const std::string &file_path)
+	* 文件名分解
+	* 0 文件格式
+	* 1 文件路径
+	* 2 文件名字
+	*/
+	static std::array<std::string, 3> splitext(const std::string &file_path)
 	{
 		auto pos = file_path.rfind('.');
-		std::array<std::string, 2> text;
+		std::array<std::string, 3> text;
 		if (std::string::npos != pos)
 		{
 			text[1] = file_path.substr(pos);
 			text[0] = file_path.substr(0, pos);
+			auto nPos = file_path.find_last_of("\\");
+			text[2] = file_path.substr(nPos + 1);
 		}
 		else
 		{
@@ -57,11 +62,13 @@ namespace path
 
 		do
 		{
+			// 文件夹
 			if (file_info.attrib & _A_SUBDIR)
 			{
-				if ((strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0))
+				if ((strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0) && (strcmp(file_info.name, "encrypted") != 0) )
 				{
 					std::string new_path = start_path + "\\" + file_info.name;
+					std::cout << "查找加密文件：" << new_path << std::endl;
 					for (auto filename : walk(new_path)) file_list.push_back(filename);
 				}
 			}
@@ -69,7 +76,12 @@ namespace path
 			{
 				std::string new_path = start_path + "\\";
 				new_path += file_info.name;
-				file_list.push_back(new_path);
+				if (path::splitext(file_info.name)[1] == ".png")
+				{
+					std::cout << "--> 需要加密文件：" << new_path << std::endl;
+					file_list.push_back(new_path);
+				}
+				
 			}
 		} while (_findnext(handle, &file_info) == 0);
 

@@ -23,15 +23,20 @@ namespace path
 
 	/**
 	 * 文件名分解
+	 * 0 文件格式
+	 * 1 文件路径
+	 * 2 文件名字
 	 */
-	static std::array<std::string, 2> splitext(const std::string &file_path)
+	static std::array<std::string, 3> splitext(const std::string &file_path)
 	{
 		auto pos = file_path.rfind('.');
-		std::array<std::string, 2> text;
+		std::array<std::string, 3> text;
 		if (std::string::npos != pos)
 		{
 			text[1] = file_path.substr(pos);
 			text[0] = file_path.substr(0, pos);
+			auto nPos = file_path.find_last_of("\\");
+			text[2] = file_path.substr(nPos + 1);
 		}
 		else
 		{
