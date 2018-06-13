@@ -5,7 +5,8 @@
 #include <sstream>
 #include "AES.h"
 #include "Struct.h"
-
+#include <fstream>
+#include <iostream>
 /**
  * 从流中读取一些数据
  */
@@ -75,4 +76,42 @@ static void DecryptBlock(std::stringstream &ss, const aes_key &key)
 	AES::DecryptData(&buffer[0], block_size, key);
 	ss.seekg(0); ss.seekp(0);
 	for (uint32_t i = 0; i < block_size; ++i) ss.put(buffer[i]);
+}
+
+/*
+* 0 打开失败
+* 1 已加密
+* 2 未加密
+*/
+static int EnFile(std::string filename, const aes_key &key)
+{
+	std::ifstream in_file(filename, std::ios::binary | std::ios::ate);
+	if (!in_file.is_open())
+	{
+		std::cerr << "=== En 打开" << filename << " 失败！" << std::endl;
+		return 0;
+	}
+
+	// 读取数据块位置
+	uint64_t end_pos = in_file.tellg();
+	in_file.seekg(end_pos - sizeof(uint64_t));
+	uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(ReadSome<sizeof(uint64_t)>(in_file)[0]));
+	in_file.seekg(block_start_pos);
+
+	// 解密数据块信息
+	auto block_info = ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t)-block_start_pos));
+	std::string sssaasd = block_info.str();
+	DecryptBlock(block_info, key);
+
+	// 验证数据块内容
+	auto block_head = ReadSome<sizeof(BLOCK_HEAD)>(block_info);
+	for (unsigned int i = 0; i < block_head.size(); ++i)
+	{
+		if (block_head[i] == BLOCK_HEAD[i])
+		{
+			return 1;
+		}
+	}
+
+	return 2;
 }

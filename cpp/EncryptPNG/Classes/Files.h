@@ -6,6 +6,7 @@
 #include <vector>
 #include <direct.h>
 #include <windows.h>
+#include <fstream>
 
 namespace path
 {
@@ -21,22 +22,39 @@ namespace path
 		return current_path.substr(0, pos);
 	}
 
+	/*
+	* 子文件是否存在，不存在则创建 成功 返回0 失败 -1
+	*/
+	static int filedir(std::string &filename)
+	{
+		int lastPos = filename.find_last_of("\\");
+		if (lastPos != std::string::npos)
+		{
+			std::string dirName = filename.substr(0, lastPos);
+			if (_access(dirName.c_str(), 0) == -1)
+			{
+				int i = _mkdir(dirName.c_str());
+				return i;
+			}
+		}
+		return 0;
+
+	}
+
 	/**
 	* 文件名分解
 	* 0 文件格式
 	* 1 文件路径
 	* 2 文件名字
 	*/
-	static std::array<std::string, 3> splitext(const std::string &file_path)
+	static std::array<std::string, 2> splitext(const std::string &file_path)
 	{
 		auto pos = file_path.rfind('.');
-		std::array<std::string, 3> text;
+		std::array<std::string, 2> text;
 		if (std::string::npos != pos)
 		{
 			text[1] = file_path.substr(pos);
 			text[0] = file_path.substr(0, pos);
-			auto nPos = file_path.find_last_of("\\");
-			text[2] = file_path.substr(nPos + 1);
 		}
 		else
 		{
@@ -89,4 +107,43 @@ namespace path
 
 		return file_list;
 	}
+
+	// 直接拷贝加密文件
+	static void copy(std::string src, std::string dst)
+	{
+		std::ifstream in(src, std::ios::binary);
+		if (!in.is_open()) {
+			std::cout << "error open file " << src << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		std::ofstream out(dst, std::ios::binary);
+		if (!out.is_open()) {
+			std::cout << "error open file " << dst << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		if (src == dst) {
+			std::cout << "the src file can't be same with dst file" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		std::cout << "--> " << src << "拷贝完成" << std::endl;
+
+		char buf[2048];
+		long long totalBytes = 0;
+		while (in)
+		{
+			//read从in流中读取2048字节，放入buf数组中，同时文件指针向后移动2048字节
+			//若不足2048字节遇到文件结尾，则以实际提取字节读取。
+			in.read(buf, 2048);
+			//gcount()用来提取读取的字节数，write将buf中的内容写入out流。
+			out.write(buf, in.gcount());
+			totalBytes += in.gcount();
+		}
+
+		in.close();
+		out.close();
+	}
+	
 }

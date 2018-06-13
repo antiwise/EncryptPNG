@@ -10,6 +10,34 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 {
 	for (auto &filename : filelist)
 	{
+		// 写入路径
+// 		std::string out_path = "\\encrypt\\" + filename; // + path::splitext(filename)[0] + ".png";//.epng
+// 		auto absolute_path = path::curdir();
+// 		out_path = absolute_path + out_path;
+
+		// 取出相对路径
+		auto filePath = path::curdir() + "\\encrypted\\";
+		auto outFile = filename.substr(filePath.size(), filename.size());
+
+		// 绝对路径
+		std::string out_path = "\\encrypt\\" + outFile;
+		auto absolute_path = path::curdir();
+		out_path = absolute_path + out_path;
+
+		if (path::filedir(out_path) == -1)
+		{
+			std::cerr << out_path << " 文件夹不存在" << std::endl;
+			break;
+		}
+
+		// 如果已经解密直接拷贝
+		if ( DeFile(filename, key) == 2)
+		{
+			//std::cerr << "--->" << filename << " 已经解密" << std::endl;
+			path::copy(filename, out_path);
+			continue;
+		}
+
 		std::ifstream in_file(filename, std::ios::binary | std::ios::ate);
 		if (!in_file.is_open())
 		{
@@ -24,7 +52,7 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		in_file.seekg(block_start_pos);
 
 		// 解密数据块信息
-		auto block_info = ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t) - block_start_pos));
+		auto block_info = ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t)-block_start_pos));
 		std::string sssaasd = block_info.str();
 		DecryptBlock(block_info, key);
 
@@ -38,11 +66,6 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 				return;
 			}
 		}
-
-		//auto pngName = filename.find_last_of("\\") + 1;
-		std::string out_path = "\\encrypt\\" + path::splitext(filename)[2]; // + path::splitext(filename)[0] + ".png";//.epng
-		auto absolute_path = path::curdir();
-		out_path = absolute_path + out_path;
 
 		std::ofstream out_file(out_path, std::ios::binary);
 		if (!out_file.is_open())
@@ -89,7 +112,7 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 			else if (strcmp(s_name.c_str(), "IEND") == 0)
 			{
 				WriteToSteam(IEND_DATA, sizeof(IEND_DATA), out_file);
-				std::cout << "成功解密：" << filename << std::endl;
+				std::cout << "===成功解密：" << filename << std::endl;
 				break;
 			}
 			else
@@ -99,7 +122,7 @@ void DecryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 				read_size += block.size + CRC_SIZE;
 			}
 		}
-		std::cerr << "解密" << path::splitext(filename)[0] << ".png" << " 文件完成" << std::endl;
+		std::cerr << "=== 解密 :" << path::splitext(filename)[0] << ".png" << " 文件完成" << std::endl;
 		//out_file.close();
 	}
 }

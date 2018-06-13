@@ -76,14 +76,29 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 
 	for (auto &filename : filelist)
 	{
-		// 文件信息头部
-		for (auto ch : BLOCK_HEAD) block_info.put(ch);
+		// 取出相对路径
+		auto filePath = path::curdir() + "\\encrypt\\";
+		auto outFile = filename.substr(filePath.size(), filename.size());
 
-		// 写入文件数据
-		auto pngName = filename.find_last_of("\\")+1;
-		std::string out_path = "\\encrypted\\" + filename.substr(pngName); // + path::splitext(filename)[0] + ".png";//.epng
+		// 绝对路径
+		std::string out_path = "\\encrypted\\" + outFile;
 		auto absolute_path = path::curdir();
 		out_path = absolute_path + out_path;
+
+		if (path::filedir(out_path) == -1)
+		{
+			std::cerr << out_path << " 文件夹不存在" << std::endl;
+			break;
+		}
+
+		
+		// 如果已经加密直接拷贝
+		if (EnFile(filename, key) == 1)
+		{
+			//std::cerr << "--->" << filename << " 已经加密" << std::endl;
+			path::copy(filename, out_path);
+			continue;
+		}
 
 		out_file.open(out_path, std::ios::binary);
 		if (!out_file.is_open())
@@ -94,6 +109,9 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 			std::cerr << "创建" << filename << " 失败！" << std::endl;
 			continue;
 		}
+
+		// 文件信息头部
+		for (auto ch : BLOCK_HEAD) block_info.put(ch);
 		
 		WriteFileData(filename, out_file, block_info);
 
@@ -114,4 +132,9 @@ void EncryptPNG(const std::vector<std::string> &filelist, const aes_key &key)
 		block_info.str("");
 		block_info.clear();
 	}
+}
+
+bool CheckFileEn(const std::string &filename)
+{
+	return false;
 }
