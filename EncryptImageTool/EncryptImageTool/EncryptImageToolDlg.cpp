@@ -71,6 +71,8 @@ BEGIN_MESSAGE_MAP(CEncryptImageToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTENSTART, &CEncryptImageToolDlg::OnBnClickedButenstart)
 	ON_BN_CLICKED(IDC_BUTTONKEY, &CEncryptImageToolDlg::OnBnClickedButtonReadKey)
 	ON_BN_CLICKED(IDC_BUTZIP, &CEncryptImageToolDlg::OnBnClickedButzip)
+	ON_EN_KILLFOCUS(IDC_EDITMAXBOX, &CEncryptImageToolDlg::OnEnKillfocusEditmaxbox)
+	ON_EN_KILLFOCUS(IDC_EDITMINBOX, &CEncryptImageToolDlg::OnEnKillfocusEditminbox)
 END_MESSAGE_MAP()
 
 
@@ -116,6 +118,16 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
 
 	CheckFilePath();
+
+	m_pMinEdit = (CEdit*)GetDlgItem(IDC_EDITMINBOX);
+	m_pMinEdit->SetWindowTextW(_T("65"));
+	m_pMinEdit->SetSel(0, 2);
+
+	m_pMaxEdit = (CEdit*)GetDlgItem(IDC_EDITMAXBOX);
+	m_pMaxEdit->SetWindowTextW(_T("70"));
+	m_pMaxEdit->SetSel(0, 2);
+
+
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -410,14 +422,39 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 	CListBox *List;
 	List = (CListBox*)GetDlgItem(IDC_LISTCONTROL);
 	List->ResetContent();
-	List->AddString(_T("======开始压缩PNG======"));
 
+	std::string eQua = "";
+	CString eStr;
+
+	m_pMinEdit->GetWindowTextW(eStr);
+	eQua = CT2CA(eStr.GetBuffer(0));
+	int minQua = atoi(eQua.c_str());
+
+	m_pMaxEdit->GetWindowTextW(eStr);
+	eQua = CT2CA(eStr.GetBuffer(0));
+	int maxQua = atoi(eQua.c_str());
+
+	// 如果最小品质比最大品质大，则提高最大品质 +5
+	if ( minQua > maxQua)
+	{
+		maxQua = minQua + 5;
+	}
+
+	// 图片品质设定范围检查
+	if ( minQua < 0 || minQua > 95 || maxQua < 5 || maxQua > 100)
+	{
+		MessageBoxA(NULL, LPCSTR("请重新设置压缩图片品质!"), NULL, MB_OK);
+		return;
+	}
+
+	// 开始压缩图片
+	List->AddString(_T("======开始压缩PNG======"));
 	for (auto &filename : m_vecPngFiles)
 	{
 		zipFile = "压缩：";
 		zipFile += filename;
 
-		int zipState = ImageZipPng(filename, 50, 60);
+		int zipState = ImageZipPng(filename, minQua, maxQua);
 		
 		if ( zipState == 1)
 		{
@@ -455,4 +492,45 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 			m_vecZipPngFiles.push_back(filename);
 		}
 	}
+}
+
+void CEncryptImageToolDlg::OnEnKillfocusEditmaxbox()
+{
+	// TODO:  设定控件edit可输入数字范围  最大品质
+	UpdateData(true);
+
+	std::string eQua = "";
+	CString eStr;
+
+	m_pMaxEdit->GetWindowTextW(eStr);
+	eQua = CT2CA(eStr.GetBuffer(0));
+	int maxQua = atoi(eQua.c_str());
+
+	if ( maxQua <5 || maxQua > 100)
+	{
+		MessageBoxA(NULL, LPCSTR("品质数值超过范围! (5-100)"), NULL, MB_OK);
+		UpdateData(false);
+	}
+	
+}
+
+
+void CEncryptImageToolDlg::OnEnKillfocusEditminbox()
+{
+	// TODO:  设定控件edit可输入数字范围  最小品质
+	UpdateData(true);
+
+	std::string eQua = "";
+	CString eStr;
+
+	m_pMinEdit->GetWindowTextW(eStr);
+	eQua = CT2CA(eStr.GetBuffer(0));
+	int minQua = atoi(eQua.c_str());
+
+	if (minQua < 0 || minQua > 95)
+	{
+		MessageBoxA(NULL, LPCSTR("品质数值超过范围! (0-95)"), NULL, MB_OK);
+		UpdateData(false);
+	}
+
 }

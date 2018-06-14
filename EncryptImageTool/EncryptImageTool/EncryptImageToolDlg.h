@@ -56,7 +56,12 @@ private:
 
 	std::vector< std::string > m_vecPngFiles;		// 原始图片列表，未加密
 	std::vector< std::string > m_vecZipPngFiles;		// 压缩后图片列表，待加密
+
+	CEdit*      m_pMinEdit;
+	CEdit*      m_pMaxEdit;
 public:
 	
 	
+	afx_msg void OnEnKillfocusEditmaxbox();
+	afx_msg void OnEnKillfocusEditminbox();
 };
