@@ -9,11 +9,55 @@
 #include <iostream>
 #include <io.h>
 #include <direct.h>
+#include <time.h>
 /**
  * 从流中读取一些数据
  */
 namespace Tool
 {
+	static std::string getTime()
+	{
+		SYSTEMTIME st = { 0 };
+		GetLocalTime(&st);
+		
+		char buff[256];
+
+		sprintf_s(buff, "%02d:%02d:%02d  ", st.wHour, st.wMinute, st.wSecond);
+		return buff;
+
+	}
+	/*
+	* 获取当前目录
+	*/
+	static std::string curdir()
+	{
+		char exe_full_path[MAX_PATH];
+		GetModuleFileNameA(NULL, exe_full_path, MAX_PATH);
+		std::string current_path(exe_full_path);
+		int pos = current_path.find_last_of('\\', current_path.length());
+		return current_path.substr(0, pos);
+	}
+
+	// 打印log日志
+	static void EnToolLog(std::string str){
+		//char* path = "C:\\1.txt"; // 你要创建文件的路径
+		std::string logPath = curdir() + "\\log.txt";
+		static bool bClear = false;
+		if (bClear == false)
+		{
+			std::fstream file(logPath, std::ios::out);		// 清空文件
+			bClear = true;
+		}
+
+		std::string curTime = getTime();
+		std::ofstream fout(logPath, std::ios::app);
+		if (fout) { // 如果创建成功
+			fout <<curTime + str << std::endl; // 使用与cout同样的方式进行写入
+
+			fout.close();  // 执行完操作后关闭文件句柄
+		}
+	}
+
 	template <int _Value, typename _Stream>
 	static std::array<char, _Value> ReadSome(_Stream &stream)
 	{
@@ -84,19 +128,41 @@ namespace Tool
 
 	static int filedir(std::string &filename)
 	{
+
 		int lastPos = filename.find_last_of("\\");
 		if (lastPos != std::string::npos)
 		{
 			std::string dirName = filename.substr(0, lastPos);
-			if (!PathIsDirectory(CString(dirName.c_str())))
+			EnToolLog("【check start】：" + dirName);
+
+			int e_pos = dirName.length();
+			int f_pos = dirName.find("\\", 0);
+			std::string subdir;
+			do 
 			{
-				::CreateDirectory(CString(dirName.c_str()), 0);
-			}
-// 			if (_access(dirName.c_str(), 0) == -1)
-// 			{
-// 				int i = _mkdir(dirName.c_str());
-// 				return i;
-// 			}
+				e_pos = dirName.find("\\", f_pos + 2);
+				if (e_pos != std::string::npos)
+				{
+					subdir = dirName.substr(0, e_pos);
+					if (!PathIsDirectory(CString(subdir.c_str())))
+					{
+						int state = ::CreateDirectory(CString(subdir.c_str()), 0);
+						if (state == 0)
+						{
+							EnToolLog("【error】创建失败：" + dirName);
+							return -1;
+						}
+						else{
+							EnToolLog("【create】创建成功：" + dirName);
+						}
+					}
+
+				}
+				f_pos = e_pos;
+			} while (f_pos != std::string::npos);
+
+			EnToolLog("【check OK】：" + dirName);
+
 		}
 		return 0;
 
@@ -147,7 +213,8 @@ namespace Tool
 				if ((strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0) && (strcmp(file_info.name, "encrypted") != 0))
 				{
 					std::string new_path = start_path + "\\" + file_info.name;
-					std::cout << "查找加密文件：" << new_path << std::endl;
+
+					EnToolLog("查找加密文件：" + new_path);
 					for (auto filename : walk(new_path)) file_list.push_back(filename);
 				}
 			}
@@ -157,7 +224,7 @@ namespace Tool
 				new_path += file_info.name;
 				if (splitext(file_info.name)[1] == ".png")
 				{
-					std::cout << "--> 需要加密文件：" << new_path << std::endl;
+					EnToolLog("需要加密文件：" + new_path);
 					file_list.push_back(new_path);
 				}
 
@@ -189,7 +256,7 @@ namespace Tool
 			exit(EXIT_FAILURE);
 		}
 
-		std::cout << "--> " << src << "拷贝完成" << std::endl;
+		EnToolLog("拷贝完成 " + src);
 
 		char buf[2048];
 		long long totalBytes = 0;
@@ -207,15 +274,4 @@ namespace Tool
 		out.close();
 	}
 
-	/*
-	* 获取当前目录
-	*/
-	static std::string curdir()
-	{
-		char exe_full_path[MAX_PATH];
-		GetModuleFileNameA(NULL, exe_full_path, MAX_PATH);
-		std::string current_path(exe_full_path);
-		int pos = current_path.find_last_of('\\', current_path.length());
-		return current_path.substr(0, pos);
-	}
 }

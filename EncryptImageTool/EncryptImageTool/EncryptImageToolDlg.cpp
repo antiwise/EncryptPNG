@@ -110,6 +110,7 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	// TODO:  在此添加额外的初始化代码
 	m_selFilePath = "";
 	m_selFileOutPath = "";
+	m_zipFilePath = "";
 	m_exePath = Tool::curdir();
 
 	clear(m_key);
@@ -247,7 +248,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	for (auto &filename : m_vecZipPngFiles)
 	{
 		fileState = "";
-		int state = CEncryptImage::EncryptPNG(filename, m_key, m_selFilePath+"\\PNGZipFiles", m_selFileOutPath);
+		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath+"\\PNGZipFiles", m_selFileOutPath);
 
 		fileState += filename;
 		if ( state == 0)
@@ -322,6 +323,8 @@ void CEncryptImageToolDlg::ReadImageKey()
 	//关闭文件输入流 
 	infile.close();
 
+	Tool::EnToolLog(strKey);
+
 	GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(CString(strKey.c_str()));
 
 }
@@ -331,16 +334,22 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	std::string exePath = m_exePath + "\\pngquant.exe";
 	std::string cmdStr = m_exePath + "\\pngZip.bat";
 	
-	std::string zipFile = m_selFilePath+"\\PNGZipFiles";
+	int lastpos = m_selFilePath.find_last_of("\\");
+	m_zipFilePath = m_selFilePath.substr(0, lastpos);
+
+	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
+	Tool::EnToolLog("[zip file]" + filename);
 
 	std::string outFile = filename.substr(m_selFilePath.size(), filename.size());
-	outFile = zipFile + outFile;
+	outFile = m_zipFilePath + outFile;
 
 	if (Tool::filedir(outFile) == -1)
 	{
-		std::cerr << outFile << " 文件夹不存在" << std::endl;
+		Tool::EnToolLog("[zipout not file]" + outFile);
 		return 0;
 	}
+
+	Tool::EnToolLog("[zipout file]" + outFile);
 
 	// 执行路径
 	cmdStr.append(" ");
@@ -483,7 +492,7 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 
 	// 读取待加密文件
 	m_vecZipPngFiles.clear();
-	std::string zipFilePath = m_selFilePath + "\\PNGZipFiles";
+	std::string zipFilePath = m_zipFilePath + "\\PNGZipFiles";
 	auto allFiles = Tool::walk(zipFilePath);
 	for (auto filename : allFiles)
 	{

@@ -43,6 +43,8 @@ public:
 
 	// 读取秘钥
 	void ReadImageKey();
+
+	// 压缩文件
 	int ImageZipPng(const std::string filename, int minQua, int maxQua);
 
 	// 检查文件路径是否都设置
@@ -50,6 +52,7 @@ public:
 
 private:
 	std::string m_selFilePath;		// 原始文件路径
+	std::string m_zipFilePath;		// 压缩文件路径
 	std::string m_selFileOutPath;	// 加密后输出文件路径
 	std::string m_exePath;			// 当前程序路径
 	aes_key m_key;				// 加密秘钥
