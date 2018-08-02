@@ -204,11 +204,7 @@ void CEncryptImageToolDlg::OnBnClickedButfilesel()
 		}
 	}
 
-	int lastpos = m_selFilePath.find_last_of("\\");
-	m_zipFilePath = m_selFilePath.substr(0, lastpos);
-
-	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
-
+	
 	CheckFilePath();
 }
 
@@ -220,6 +216,13 @@ void CEncryptImageToolDlg::OnBnClickedButfileout()
 
 	GetDlgItem(IDC_FILE_OUT)->SetWindowTextW(outFile);
 	m_selFileOutPath = CT2CA(outFile.GetBuffer(0));
+
+
+	int lastpos = m_selFileOutPath.find_last_of("\\");
+	m_zipFilePath = m_selFileOutPath.substr(0, lastpos);
+
+	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
+
 
 	CheckFilePath();
 }
@@ -253,12 +256,15 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 		return;
 	}
 
+	Tool::EnToolLog("========加密输出====================");
+	Tool::EnToolLog("========加密输出 : " + m_selFileOutPath);
+
 
 	// 开始加密文件
 	for (auto &filename : m_vecZipPngFiles)
 	{
 		fileState = "";
-		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath+"\\PNGZipFiles", m_selFileOutPath+"\\");
+		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath, m_selFileOutPath);
 
 		fileState += filename;
 		if ( state == 0)

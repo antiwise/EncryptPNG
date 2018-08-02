@@ -45,7 +45,7 @@ namespace Tool
 		static bool bClear = false;
 		if (bClear == false)
 		{
-			std::fstream file(logPath, std::ios::out);		// 清空文件
+			//std::fstream file(logPath, std::ios::out);		// 清空文件
 			bClear = true;
 		}
 
@@ -132,8 +132,8 @@ namespace Tool
 		int lastPos = filename.find_last_of("\\");
 		if (lastPos != std::string::npos)
 		{
-			std::string dirName = filename.substr(0, lastPos+1);
-			EnToolLog("【check start】：" + dirName);
+			std::string dirName = filename.substr(0, lastPos + 1 );
+			EnToolLog("==>【check start】：" + dirName);
 
 			int e_pos = dirName.length();
 			int f_pos = dirName.find("\\", 0);
