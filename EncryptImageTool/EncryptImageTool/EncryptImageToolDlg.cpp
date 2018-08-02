@@ -116,7 +116,7 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	clear(m_key);
 	m_vecPngFiles.clear();
 	m_vecZipPngFiles.clear();
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
+	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
 
 	CheckFilePath();
 
@@ -204,6 +204,11 @@ void CEncryptImageToolDlg::OnBnClickedButfilesel()
 		}
 	}
 
+	int lastpos = m_selFilePath.find_last_of("\\");
+	m_zipFilePath = m_selFilePath.substr(0, lastpos);
+
+	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
+
 	CheckFilePath();
 }
 
@@ -242,13 +247,18 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	CListBox *List;
 	List = (CListBox*)GetDlgItem(IDC_LISTCONTROL);
 	List->ResetContent();
+	if (m_vecZipPngFiles.size() < 1)
+	{
+		Tool::EnToolLog("[error] 无加密文件");
+		return;
+	}
 
 
 	// 开始加密文件
 	for (auto &filename : m_vecZipPngFiles)
 	{
 		fileState = "";
-		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath+"\\PNGZipFiles", m_selFileOutPath);
+		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath+"\\PNGZipFiles", m_selFileOutPath+"\\");
 
 		fileState += filename;
 		if ( state == 0)
@@ -260,6 +270,9 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 		{
 			fileState += "-->加密成功";
 			enCount++;
+		}
+		else{
+			fileState += "-->加密失败";
 		}
 		count++;
 
@@ -283,15 +296,15 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	SetBtnState(true);
 
 	// 加密完成恢复状态
-	GetDlgItem(IDC_BUTZIP)->EnableWindow(1);
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
+	//GetDlgItem(IDC_BUTZIP)->EnableWindow(1);
+	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
 }
 
 void CEncryptImageToolDlg::SetBtnState(bool enable)
 {
 	GetDlgItem(IDC_BUTFILESEL)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable);
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
+	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTTONKEY)->EnableWindow(enable);
 }
 
@@ -334,10 +347,6 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	std::string exePath = m_exePath + "\\pngquant.exe";
 	std::string cmdStr = m_exePath + "\\pngZip.bat";
 	
-	int lastpos = m_selFilePath.find_last_of("\\");
-	m_zipFilePath = m_selFilePath.substr(0, lastpos);
-
-	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
 	Tool::EnToolLog("[zip file]" + filename);
 
 	std::string outFile = filename.substr(m_selFilePath.size(), filename.size());
@@ -349,7 +358,7 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 		return 0;
 	}
 
-	Tool::EnToolLog("[zipout file]" + outFile);
+	Tool::EnToolLog("[zipout png]" + outFile);
 
 	// 执行路径
 	cmdStr.append(" ");
@@ -371,6 +380,7 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	// 压缩后文件名
 	cmdStr.append(" ");
 	cmdStr.append(outFile);
+	Tool::EnToolLog("[zipCmd]" + cmdStr);
 
  	system(cmdStr.c_str() );
 	return 1;
@@ -396,11 +406,11 @@ void CEncryptImageToolDlg::CheckFilePath()
 
 	if ( bSet )
 	{
-		GetDlgItem(IDC_BUTZIP)->EnableWindow(1);		// 压缩按钮不可点击
+		//GetDlgItem(IDC_BUTZIP)->EnableWindow(1);		// 压缩按钮不可点击
 	}
 	else
 	{
-		GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
+		//GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
 	}
 
 }
@@ -486,13 +496,13 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 // 	List->AddString(_T("======================="));
 // 	List->AddString(_T("======请对PNG图片加密======"));
 
-	GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(1);	// 压缩完成可以加密
+	//GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
+	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(1);	// 压缩完成可以加密
 
 
 	// 读取待加密文件
 	m_vecZipPngFiles.clear();
-	std::string zipFilePath = m_zipFilePath + "\\PNGZipFiles";
+	std::string zipFilePath = m_zipFilePath;
 	auto allFiles = Tool::walk(zipFilePath);
 	for (auto filename : allFiles)
 	{

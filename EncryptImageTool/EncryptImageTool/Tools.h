@@ -132,12 +132,13 @@ namespace Tool
 		int lastPos = filename.find_last_of("\\");
 		if (lastPos != std::string::npos)
 		{
-			std::string dirName = filename.substr(0, lastPos);
+			std::string dirName = filename.substr(0, lastPos+1);
 			EnToolLog("【check start】：" + dirName);
 
 			int e_pos = dirName.length();
 			int f_pos = dirName.find("\\", 0);
-			std::string subdir;
+
+			std::string subdir = "";
 			do 
 			{
 				e_pos = dirName.find("\\", f_pos + 2);
@@ -146,14 +147,14 @@ namespace Tool
 					subdir = dirName.substr(0, e_pos);
 					if (!PathIsDirectory(CString(subdir.c_str())))
 					{
-						int state = ::CreateDirectory(CString(subdir.c_str()), 0);
+						int state = ::CreateDirectory(CString(subdir.c_str()), NULL);
 						if (state == 0)
 						{
-							EnToolLog("【error】创建失败：" + dirName);
+							EnToolLog("【error】创建失败：" + subdir);
 							return -1;
 						}
 						else{
-							EnToolLog("【create】创建成功：" + dirName);
+							EnToolLog("【create】创建成功：" + subdir);
 						}
 					}
 
@@ -161,7 +162,14 @@ namespace Tool
 				f_pos = e_pos;
 			} while (f_pos != std::string::npos);
 
-			EnToolLog("【check OK】：" + dirName);
+			if (!PathIsDirectory(CString(subdir.c_str())))
+			{
+				EnToolLog("【check create fail】：" + subdir);
+			}
+			else
+			{
+				EnToolLog("【check create OK】：" + subdir);
+			}
 
 		}
 		return 0;
@@ -224,7 +232,7 @@ namespace Tool
 				new_path += file_info.name;
 				if (splitext(file_info.name)[1] == ".png")
 				{
-					EnToolLog("需要加密文件：" + new_path);
+					EnToolLog("[png] 需要加密文件：" + new_path);
 					file_list.push_back(new_path);
 				}
 
