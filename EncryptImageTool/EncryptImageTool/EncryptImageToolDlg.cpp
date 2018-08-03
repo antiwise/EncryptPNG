@@ -116,7 +116,8 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	clear(m_key);
 	m_vecPngFiles.clear();
 	m_vecZipPngFiles.clear();
-	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
+	m_vecAllFiles.clear();
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
 
 	CheckFilePath();
 
@@ -207,6 +208,9 @@ void CEncryptImageToolDlg::OnBnClickedButfilesel()
 		}
 	}
 
+	m_vecAllFiles.clear();
+	m_vecAllFiles = Tool::getAllFiles(m_selFilePath);
+
 	
 	CheckFilePath();
 }
@@ -228,6 +232,7 @@ void CEncryptImageToolDlg::OnBnClickedButfileout()
 
 
 	CheckFilePath();
+	CopyAllFile();
 }
 
 
@@ -253,7 +258,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	CListBox *List;
 	List = (CListBox*)GetDlgItem(IDC_LISTCONTROL);
 	List->ResetContent();
-	if (m_vecZipPngFiles.size() < 1)
+	if ( m_vecZipPngFiles.empty() )
 	{
 		Tool::EnToolLog("[error] 无加密文件");
 		return;
@@ -306,15 +311,15 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	SetBtnState(true);
 
 	// 加密完成恢复状态
-	//GetDlgItem(IDC_BUTZIP)->EnableWindow(1);
-	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
+	GetDlgItem(IDC_BUTZIP)->EnableWindow(1);
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
 }
 
 void CEncryptImageToolDlg::SetBtnState(bool enable)
 {
 	GetDlgItem(IDC_BUTFILESEL)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable);
-	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTTONKEY)->EnableWindow(enable);
 }
 
@@ -420,12 +425,51 @@ void CEncryptImageToolDlg::CheckFilePath()
 
 	if ( bSet )
 	{
-		//GetDlgItem(IDC_BUTZIP)->EnableWindow(1);		// 压缩按钮不可点击
+		GetDlgItem(IDC_BUTZIP)->EnableWindow(1);		// 压缩按钮不可点击
 	}
 	else
 	{
-		//GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
+		GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
 	}
+
+}
+
+void CEncryptImageToolDlg::CopyAllFile()
+{
+	Tool::EnToolLog("=== 复制文件到输出目录 ===");
+	for (auto &filename : m_vecAllFiles)
+	{
+		// 取出相对路径
+		auto outFile = filename.substr(m_selFilePath.size(), filename.size());
+		// 绝对路径
+		std::string out_path = m_selFileOutPath + outFile;
+		
+		if (Tool::filedir(out_path) == -1 )
+		{
+			Tool::EnToolLog("[error] 创建复制文件夹失败 " + filename);
+			continue;
+		}
+
+// 		int lastPos = out_path.find_last_of("\\");
+// 		if (lastPos != std::string::npos)
+// 		{
+// 			out_path = out_path.substr(0, lastPos);
+// 		}
+
+		Tool::EnToolLog("[copy] 复制文件 " + out_path);
+		//lstrcpy(LPWSTR(filename.c_str()), LPCWSTR(out_path.c_str()));
+		if (CopyFile(LPCWSTR(filename.c_str()), LPCWSTR(out_path.c_str()), FALSE))
+		{
+			Tool::EnToolLog("[suc] 复制文件成功 " + filename);
+		}
+		else{
+			int nError = GetLastError();
+
+			Tool::EnToolLog("[error] 复制文件失败 " + filename);
+		}
+	}
+
+	Tool::EnToolLog("===== 复制完成 =====");
 
 }
 
@@ -440,8 +484,6 @@ void CEncryptImageToolDlg::OnBnClickedButtonReadKey()
 void CEncryptImageToolDlg::OnBnClickedButzip()
 {
 	// TODO:  压缩PNG文件
-
-	int count = 0;
 	int maxCount = m_vecPngFiles.size();
 
 	CProgressCtrl* pProg = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS);
@@ -481,12 +523,22 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 	}
 
 	// 开始压缩图片
-	List->AddString(_T("======开始压缩PNG======"));
-	int zipCount = m_vecPngFiles.size();
-	Tool::EnToolLog("[zipFileCount start] : " + zipCount);
+	if (m_vecPngFiles.empty())
+	{
+		List->AddString(_T("======没有文件可压缩======"));
+	}
+	else
+	{
+		List->AddString(_T("======开始压缩PNG======"));
+	}
+
+	int count = 1;
 	for (auto &filename : m_vecPngFiles)
 	{
-		zipFile = "压缩：";
+		char buff[256];
+		sprintf_s(buff, "压缩 (%d/%d) ", count, maxCount);
+		zipFile += buff;
+
 		zipFile += filename;
 
 		int zipState = ImageZipPng(filename, minQua, maxQua);
@@ -494,26 +546,23 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 		if ( zipState == 0)
 		{
 			zipFile += "==> 压缩完成";
-
-			List->AddString(CString(zipFile.c_str()));
-
-
-			zPos = count / maxCount * 100;
-			pProg->SetPos(zPos);
 		}
-		
+		else{
+			zipFile += "==> 压缩完成";
+		}
+		List->AddString(CString(zipFile.c_str()));
+
+
+		zPos = count / maxCount * 100;
+		pProg->SetPos(zPos);
+
+		count++;
 	}
 
 	List->AddString(_T("======压缩PNG完成======"));
-	if ( m_vecPngFiles.size() <= 0)
-	{
-		List->AddString(_T("======没有文件可压缩======"));
-	}
-// 	List->AddString(_T("======================="));
-// 	List->AddString(_T("======请对PNG图片加密======"));
 
-	//GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
-	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(1);	// 压缩完成可以加密
+	GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(1);	// 压缩完成可以加密
 
 
 	// 读取待加密文件

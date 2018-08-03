@@ -49,6 +49,7 @@ public:
 
 	// 检查文件路径是否都设置
 	void CheckFilePath();
+	void CopyAllFile();
 
 private:
 	std::string m_selFilePath;		// 原始文件路径
@@ -58,6 +59,7 @@ private:
 	aes_key m_key;				// 加密秘钥
 
 	std::vector< std::string > m_vecPngFiles;		// 原始图片列表，未加密
+	std::vector< std::string > m_vecAllFiles;		// 原始图片列表，未加密
 	std::vector< std::string > m_vecZipPngFiles;		// 压缩后图片列表，待加密
 
 	CEdit*      m_pMinEdit;

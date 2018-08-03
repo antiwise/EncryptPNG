@@ -165,6 +165,7 @@ namespace Tool
 			if (!PathIsDirectory(CString(subdir.c_str())))
 			{
 				EnToolLog("【check create fail】：" + subdir);
+				return -1;
 			}
 			else
 			{
@@ -218,7 +219,7 @@ namespace Tool
 			// 文件夹
 			if (file_info.attrib & _A_SUBDIR)
 			{
-				if ((strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0) && (strcmp(file_info.name, "encrypted") != 0))
+				if ( (strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0) )
 				{
 					std::string new_path = start_path + "\\" + file_info.name;
 
@@ -235,6 +236,49 @@ namespace Tool
 					EnToolLog("[png] 需要加密文件：" + new_path);
 					file_list.push_back(new_path);
 				}
+
+			}
+		} while (_findnext(handle, &file_info) == 0);
+
+		_findclose(handle);
+
+		return file_list;
+	}
+
+	/**
+	* 获得文件下所有文件
+	*/
+	static std::vector<std::string> getAllFiles(const std::string &start_path)
+	{
+		_finddata_t file_info;
+		std::vector<std::string> file_list;
+		std::string find_path = start_path + "\\*";
+		long handle = _findfirst(find_path.c_str(), &file_info);
+
+		if (handle == -1L)
+		{
+			return file_list;
+		}
+
+		do
+		{
+			// 文件夹
+			if (file_info.attrib & _A_SUBDIR)
+			{
+				if ((strcmp(file_info.name, ".") != 0) && (strcmp(file_info.name, "..") != 0))
+				{
+					std::string new_path = start_path + "\\" + file_info.name;
+
+					EnToolLog("查找加密文件：" + new_path);
+					for (auto filename : getAllFiles(new_path)) file_list.push_back(filename);
+				}
+			}
+			else
+			{
+				std::string new_path = start_path + "\\";
+				new_path += file_info.name;
+
+				file_list.push_back(new_path);
 
 			}
 		} while (_findnext(handle, &file_info) == 0);
