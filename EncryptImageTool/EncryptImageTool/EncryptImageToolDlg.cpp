@@ -128,6 +128,9 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	m_pMaxEdit->SetWindowTextW(_T("70"));
 	m_pMaxEdit->SetSel(0, 2);
 
+	std::string logPath = Tool::curdir() + "\\log.txt";
+	std::fstream file(logPath, std::ios::out);		// 清空文件
+
 
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -237,7 +240,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	int count = 0;	// 当前操作文件数量
 	int enCount = 0;	// 可加密数量
 	int enCounted = 0; // 已经加密数量
-	int maxCount = m_vecPngFiles.size();// 需要加密数量
+	int maxCount = m_vecZipPngFiles.size();// 需要加密数量
 
 	// 进度条
 	int proPos = 0;		// 加密进度
@@ -255,14 +258,17 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 		Tool::EnToolLog("[error] 无加密文件");
 		return;
 	}
-
+	
 	Tool::EnToolLog("========加密输出====================");
+	int fileCount = m_vecZipPngFiles.size();
+	Tool::EnToolLog("[encryCount] 待加密文件 :" + fileCount);
 	Tool::EnToolLog("========加密输出 : " + m_selFileOutPath);
 
 
 	// 开始加密文件
 	for (auto &filename : m_vecZipPngFiles)
 	{
+		Tool::EnToolLog("[encryFile] 待加密文件： " + filename);
 		fileState = "";
 		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath, m_selFileOutPath);
 
@@ -474,6 +480,8 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 
 	// 开始压缩图片
 	List->AddString(_T("======开始压缩PNG======"));
+	int zipCount = m_vecPngFiles.size();
+	Tool::EnToolLog("[zipFileCount start] : " + zipCount);
 	for (auto &filename : m_vecPngFiles)
 	{
 		zipFile = "压缩：";

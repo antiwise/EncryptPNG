@@ -133,6 +133,12 @@ void CEncryptImage::WriteFileData(const std::string &filename, std::ofstream &ou
 	file.close();
 }
 
+
+/**
+* 1 已经加密
+* 2 未加密
+* 0 打开失败 文件损坏
+*/
 int CEncryptImage::EnFile(std::string filename, const aes_key &key)
 {
 	std::ifstream in_file(filename, std::ios::binary | std::ios::ate);

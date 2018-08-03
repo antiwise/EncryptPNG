@@ -20,4 +20,4 @@ echo out --> %outPath%
 REM shift
 REM if NOT x%1==x goto start
 
-pause
+REM pause
