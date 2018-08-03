@@ -23,7 +23,7 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 
 	// ¾ø¶ÔÂ·¾¶
 	std::string out_path = outPath + outFile;
-	Tool::EnToolLog("[EncryptPng] " + outPath);
+	//Tool::EnToolLog("[EncryptPng] " + outPath);
 
 	if (Tool::filedir(out_path) == -1)
 	{

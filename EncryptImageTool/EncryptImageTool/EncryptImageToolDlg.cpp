@@ -260,8 +260,6 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	}
 	
 	Tool::EnToolLog("========加密输出====================");
-	int fileCount = m_vecZipPngFiles.size();
-	Tool::EnToolLog("[encryCount] 待加密文件 :" + fileCount);
 	Tool::EnToolLog("========加密输出 : " + m_selFileOutPath);
 
 
@@ -354,6 +352,10 @@ void CEncryptImageToolDlg::ReadImageKey()
 
 }
 
+/**
+ * 调用成功 返回 0
+ * 失败 返回 -1
+ */
 int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, int maxQua)
 {
 	std::string exePath = m_exePath + "\\pngquant.exe";
@@ -367,7 +369,7 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	if (Tool::filedir(outFile) == -1)
 	{
 		Tool::EnToolLog("[zipout not file]" + outFile);
-		return 0;
+		return -2;
 	}
 
 	Tool::EnToolLog("[zipout png]" + outFile);
@@ -394,8 +396,8 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	cmdStr.append(outFile);
 	Tool::EnToolLog("[zipCmd]" + cmdStr);
 
- 	system(cmdStr.c_str() );
-	return 1;
+ 	int state = system(cmdStr.c_str() );
+	return state;
 
 }
 
@@ -489,7 +491,7 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 
 		int zipState = ImageZipPng(filename, minQua, maxQua);
 		
-		if ( zipState == 1)
+		if ( zipState == 0)
 		{
 			zipFile += "==> 压缩完成";
 
