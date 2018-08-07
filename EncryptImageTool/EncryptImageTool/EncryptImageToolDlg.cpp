@@ -73,6 +73,7 @@ BEGIN_MESSAGE_MAP(CEncryptImageToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTZIP, &CEncryptImageToolDlg::OnBnClickedButzip)
 	ON_EN_KILLFOCUS(IDC_EDITMAXBOX, &CEncryptImageToolDlg::OnEnKillfocusEditmaxbox)
 	ON_EN_KILLFOCUS(IDC_EDITMINBOX, &CEncryptImageToolDlg::OnEnKillfocusEditminbox)
+	ON_EN_KILLFOCUS(IDC_EDIT, &CEncryptImageToolDlg::OnEnKillfocusEdit)
 END_MESSAGE_MAP()
 
 
@@ -128,6 +129,9 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	m_pMaxEdit = (CEdit*)GetDlgItem(IDC_EDITMAXBOX);
 	m_pMaxEdit->SetWindowTextW(_T("70"));
 	m_pMaxEdit->SetSel(0, 2);
+
+
+	m_pSelFileEdit = (CEdit*)GetDlgItem(IDC_EDIT);
 
 	std::string logPath = Tool::curdir() + "\\log.txt";
 	std::fstream file(logPath, std::ios::out);		// 清空文件
@@ -194,25 +198,11 @@ void CEncryptImageToolDlg::OnBnClickedButfilesel()
 	auto filePath = CSelectFolderDlg::Show();
 
 	GetDlgItem(IDC_SEL_FILETXT)->SetWindowTextW(filePath);
+	GetDlgItem(IDC_EDIT)->SetWindowText(filePath);
 	
 	m_selFilePath = CT2CA(filePath.GetBuffer(0));
 
-	m_vecPngFiles.clear();
-
-	auto allFiles = Tool::walk(m_selFilePath);
-	for ( auto filename : allFiles)
-	{
-		if ( Tool::splitext(filename)[1] == ".png")
-		{
-			m_vecPngFiles.push_back(filename);
-		}
-	}
-
-	m_vecAllFiles.clear();
-	m_vecAllFiles = Tool::getAllFiles(m_selFilePath);
-
-	
-	CheckFilePath();
+	UpdateSelFile();
 }
 
 
@@ -401,6 +391,7 @@ int CEncryptImageToolDlg::ImageZipPng(const std::string filename, int minQua, in
 	cmdStr.append(outFile);
 	Tool::EnToolLog("[zipCmd]" + cmdStr);
 
+	WinExec(cmdStr.c_str(), SW_HIDE);
  	int state = system(cmdStr.c_str() );
 	return state;
 
@@ -471,6 +462,26 @@ void CEncryptImageToolDlg::CopyAllFile()
 
 	Tool::EnToolLog("===== 复制完成 =====");
 
+}
+
+void CEncryptImageToolDlg::UpdateSelFile()
+{
+	m_vecPngFiles.clear();
+
+	auto allFiles = Tool::walk(m_selFilePath);
+	for (auto filename : allFiles)
+	{
+		if (Tool::splitext(filename)[1] == ".png")
+		{
+			m_vecPngFiles.push_back(filename);
+		}
+	}
+
+	m_vecAllFiles.clear();
+	m_vecAllFiles = Tool::getAllFiles(m_selFilePath);
+
+
+	CheckFilePath();
 }
 
 void CEncryptImageToolDlg::OnBnClickedButtonReadKey()
@@ -616,5 +627,17 @@ void CEncryptImageToolDlg::OnEnKillfocusEditminbox()
 		MessageBoxA(NULL, LPCSTR("品质数值超过范围! (0-95)"), NULL, MB_OK);
 		UpdateData(false);
 	}
+
+}
+
+
+void CEncryptImageToolDlg::OnEnKillfocusEdit()
+{
+	CString eStr;
+	m_pSelFileEdit->GetWindowTextW(eStr);
+	std::string outFiles = CT2CA( eStr.GetBuffer(0) );
+	m_selFileOutPath = outFiles;
+
+	UpdateSelFile();
 
 }

@@ -51,6 +51,9 @@ public:
 	void CheckFilePath();
 	void CopyAllFile();
 
+	// 获得选择文件
+	void UpdateSelFile();
+
 private:
 	std::string m_selFilePath;		// 原始文件路径
 	std::string m_zipFilePath;		// 压缩文件路径
@@ -64,9 +67,9 @@ private:
 
 	CEdit*      m_pMinEdit;
 	CEdit*      m_pMaxEdit;
+	CEdit*      m_pSelFileEdit;
 public:
-	
-	
 	afx_msg void OnEnKillfocusEditmaxbox();
 	afx_msg void OnEnKillfocusEditminbox();
+	afx_msg void OnEnKillfocusEdit();
 };
