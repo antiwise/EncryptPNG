@@ -10,6 +10,7 @@
 #include <afxwin.h>
 #include "Tools.h"
 #include "EncryptImage.h"
+#include "Decrypt.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -77,6 +78,7 @@ BEGIN_MESSAGE_MAP(CEncryptImageToolDlg, CDialogEx)
 	ON_EN_KILLFOCUS(IDC_EDITOUT, &CEncryptImageToolDlg::OnEnKillfocusEditout)
 	ON_BN_CLICKED(IDC_BUTCOPY, &CEncryptImageToolDlg::OnBnClickedButcopy)
 	ON_BN_CLICKED(IDC_CHECKLOCK, &CEncryptImageToolDlg::OnBnClickedCheckLock)
+	ON_BN_CLICKED(IDC_BUTDE, &CEncryptImageToolDlg::OnBnClickedButde)
 END_MESSAGE_MAP()
 
 
@@ -157,6 +159,14 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	GetDlgItem(IDC_BUTENSTART)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTZIP)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTCOPY)->EnableWindow(FALSE);
+
+
+	// 解密
+#if ENDE
+	GetDlgItem(IDC_BUTDE)->ShowWindow(TRUE);
+#else
+	GetDlgItem(IDC_BUTDE)->ShowWindow(FALSE);
+#endif
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -339,7 +349,8 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	//GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
 	GetDlgItem(IDC_BUTENSTART)->EnableWindow(FALSE);
 
-	MessageBoxA(NULL, LPCSTR("加密完成，欢迎使用!"), NULL, MB_OK);
+	//MessageBoxA(NULL, LPCSTR("加密完成，欢迎使用!"), NULL, MB_OK);
+	MessageBox(_T("加密完成，欢迎使用!"), _T("加密完成"), MB_OK | MB_ICONINFORMATION);
 }
 
 void CEncryptImageToolDlg::SetBtnState(bool enable)
@@ -448,18 +459,21 @@ void CEncryptImageToolDlg::CheckFilePath()
 	if (m_selFilePath.empty())
 	{
 		bSet = false;
-		MessageBoxA(NULL, LPCSTR("请选择待加密文件夹!"), NULL, MB_OK);
+		MessageBox(_T("请选择待加密文件夹"), _T("提示"), MB_OK | MB_ICONERROR);
+		//MessageBoxA(NULL, LPCSTR("请选择待加密文件夹!"), NULL, MB_OK);
 	}
-	if ( m_selFileOutPath.empty())
+	else if ( m_selFileOutPath.empty())
 	{
 		bSet = false;
-		MessageBoxA(NULL, LPCSTR("请选择输出文件夹!"), NULL, MB_OK);
+		MessageBox(_T("请选择输出文件夹"), _T("提示"), MB_OK | MB_ICONERROR);
+		//MessageBoxA(NULL, LPCSTR("请选择输出文件夹!"), NULL, MB_OK);
 	}
+	else if ( m_key.empty())
+	{
+		bSet = false;
+		MessageBox(_T("秘钥未设置"), _T("提示"), MB_OK | MB_ICONERROR);
+		//MessageBoxA(NULL, LPCSTR("秘钥未设置!"), NULL, MB_OK);
 
-	if ( m_key.empty())
-	{
-		bSet = false;
-		MessageBoxA(NULL, LPCSTR("秘钥未设置!"), NULL, MB_OK);
 	}
 
 	setLock(bSet);
@@ -488,6 +502,7 @@ void CEncryptImageToolDlg::UpdateOutFile()
 {
 	m_zipFilePath = m_selFileOutPath + "\\PNGZipFiles";
 	m_enFileOutPath = m_selFileOutPath + "\\EnFiles";
+	m_deFileOutPath = m_selFileOutPath + "\\DeFiles";
 }
 
 void CEncryptImageToolDlg::OnBnClickedButtonReadKey()
@@ -538,13 +553,15 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 	// 图片品质设定范围检查
 	if ( minQua < 0 || minQua > 95 || maxQua < 5 || maxQua > 100)
 	{
-		MessageBoxA(NULL, LPCSTR("请重新设置压缩图片品质!"), NULL, MB_OK);
+		//MessageBoxA(NULL, LPCSTR("请重新设置压缩图片品质!"), NULL, MB_OK);
+		MessageBox(_T("请重新设置压缩图片品质"), _T("提示"), MB_OK | MB_ICONERROR);
 		return;
 	}
 
 	// 开始压缩图片
 	if (m_vecPngFiles.empty())
 	{
+		MessageBox(_T("没有可压缩文件"), _T("提示"), MB_OK | MB_ICONERROR);
 		List->AddString(_T("======没有文件可压缩======"));
 	}
 	else
@@ -596,7 +613,8 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 			m_vecZipPngFiles.push_back(filename);
 		}
 	}
-	MessageBoxA(NULL, LPCSTR("文件压缩完成可进行加密操作"), NULL, MB_OK);
+	//MessageBoxA(NULL, LPCSTR("文件压缩完成可进行加密操作"), NULL, MB_OK);
+	MessageBox(_T("文件压缩完成可进行加密操作"), _T("压缩完成"), MB_OK | MB_ICONINFORMATION);
 
 	GetDlgItem(IDC_BUTENSTART)->EnableWindow(TRUE);	// 压缩完成可以加密
 }
@@ -610,12 +628,21 @@ void CEncryptImageToolDlg::OnEnKillfocusEditmaxbox()
 	CString eStr;
 
 	m_pMaxEdit->GetWindowTextW(eStr);
+	if (eStr.IsEmpty())
+	{
+		MessageBox(_T("品质数值超过范围! (5-100)"), _T("提示"), MB_OK | MB_ICONERROR);
+		m_pMaxEdit->SetWindowText(_T("70"));
+		return;
+	}
 	eQua = CT2CA(eStr.GetBuffer(0));
 	int maxQua = atoi(eQua.c_str());
 
 	if ( maxQua <5 || maxQua > 100)
 	{
-		MessageBoxA(NULL, LPCSTR("品质数值超过范围! (5-100)"), NULL, MB_OK);
+		//MessageBoxA(NULL, LPCSTR("品质数值超过范围! (5-100)"), NULL, MB_OK);
+		MessageBox(_T("品质数值超过范围! (5-100)"), _T("提示"), MB_OK | MB_ICONERROR);
+		m_pMaxEdit->SetWindowText(_T("70"));
+		eQua = "70";
 		UpdateData(false);
 	}
 	
@@ -631,12 +658,23 @@ void CEncryptImageToolDlg::OnEnKillfocusEditminbox()
 	CString eStr;
 
 	m_pMinEdit->GetWindowTextW(eStr);
+	if (eStr.IsEmpty())
+	{
+		MessageBox(_T("品质数值超过范围! (0-95)"), _T("提示"), MB_OK | MB_ICONERROR);
+		m_pMinEdit->SetWindowText(_T("65"));
+		return;
+	}
+
 	eQua = CT2CA(eStr.GetBuffer(0));
 	int minQua = atoi(eQua.c_str());
 
 	if (minQua < 0 || minQua > 95)
 	{
-		MessageBoxA(NULL, LPCSTR("品质数值超过范围! (0-95)"), NULL, MB_OK);
+		MessageBox(_T("品质数值超过范围! (0-95)"), _T("提示"), MB_OK | MB_ICONERROR);
+		//MessageBoxA(NULL, LPCSTR("品质数值超过范围! (0-95)"), NULL, MB_OK);
+		m_pMinEdit->SetWindowText(_T("65"));
+		eQua = "65";
+
 		UpdateData(false);
 	}
 
@@ -834,12 +872,14 @@ void CEncryptImageToolDlg::OnBnClickedButcopy()
 
 	if (CopyFolder( (LPCTSTR)selPath, (LPCTSTR)outPath) )		// 拷贝成功
 	{
-		MessageBoxA(NULL, LPCSTR("复制成功，可进行压缩、加密！"), NULL, MB_OK);
+		//MessageBoxA(NULL, LPCSTR("复制成功，可进行压缩、加密！"), NULL, MB_OK);
+		MessageBox(_T("复制成功，可进行压缩、加密！"), _T("复制完成"), MB_OK | MB_ICONINFORMATION);
 		GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
 		GetDlgItem(IDC_BUTCOPY)->EnableWindow(FALSE);
 	}
 	else{		// 拷贝失败
-		MessageBoxA(NULL, LPCSTR("文件复制失败"), NULL, MB_OK);
+		//MessageBoxA(NULL, LPCSTR("文件复制失败"), NULL, MB_OK);
+		MessageBox(_T("文件复制失败!"), _T("提示"), MB_OK | MB_ICONERROR);
 	}
 }
 
@@ -858,4 +898,69 @@ void CEncryptImageToolDlg::setLock(bool bLock)
 
 	this->CheckDlgButton(IDC_CHECKLOCK, bLock);
 	GetDlgItem(IDC_BUTCOPY)->EnableWindow(bLock);
+}
+
+
+// 解密
+void CEncryptImageToolDlg::OnBnClickedButde()
+{
+	if (m_deFileOutPath.empty())
+	{
+		MessageBox(_T("解密路径不存在"), _T("提示"), MB_OK | MB_ICONERROR);
+		return;
+	}
+	Tool::EnToolLog("============================================");
+	Tool::EnToolLog("开始解密文件");
+
+	// 读取加密文件
+	/*CString enPath;
+	enPath = (CString)m_enFileOutPath.c_str();
+
+	CString dePath;
+	dePath = (CString)m_deFileOutPath.c_str();*/
+
+	// 读取待加密文件
+	std::vector<std::string> files;
+	files.clear();
+
+	Tool::EnToolLog("读取加密文件");
+	auto all_files = Tool::walk(m_enFileOutPath);
+
+	for (auto filename : all_files)
+	{
+		if (Tool::splitext(filename)[1] == ".png")
+		{
+			files.push_back(filename);
+		}
+	}
+	Tool::EnToolLog("读取加密文件 ------> 完成");
+
+	// 开始解密
+	BOOL bFinish = TRUE;
+
+	for (auto enFilename : files)
+	{
+		Tool::EnToolLog("开始解密文件 ------> "+enFilename);
+		int state =	CDecrypt::DecryptPNG(enFilename, m_key, m_enFileOutPath, m_deFileOutPath);
+		std::string errStr = "==> [decrypt]解密文件 code " + state;
+		Tool::EnToolLog(errStr);
+		if (state != 1 && state != 0 )  // 0 已经解密 1 解密成功
+		{
+			bFinish = FALSE;
+			Tool::EnToolLog("解密失败 退出解密！！！！！");
+			break;
+		}
+	}
+	
+	// 解密完成
+	if (bFinish)
+	{
+		Tool::EnToolLog("解密完成！！！！！");
+		MessageBox(_T("恭喜！解密成功！"), _T("解密完成"), MB_OK | MB_ICONINFORMATION);
+	} 
+	else
+	{
+		Tool::EnToolLog("解密失败！！！！！");
+		MessageBox(_T("解密失败！请查看log文件"), _T("解密失败"), MB_OK | MB_ICONERROR);
+	}
 }

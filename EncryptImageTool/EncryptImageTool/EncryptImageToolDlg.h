@@ -66,6 +66,8 @@ private:
 	std::string m_zipFilePath;		// 压缩文件输出路径
 	std::string m_selFileOutPath;	// 输出文件路径
 	std::string m_enFileOutPath;	// 加密后输出文件路径
+	std::string m_deFileOutPath;	// 解密后输出文件路径
+
 	std::string m_exePath;			// 当前程序路径
 
 	std::vector< std::string > m_vecPngFiles;		// 原始图片列表，未加密
@@ -85,7 +87,9 @@ public:
 	afx_msg void OnEnKillfocusEditout();
 	afx_msg void OnBnClickedButcopy();
 	afx_msg void OnBnClickedCheckLock();
+	afx_msg void OnBnClickedButde();
 
 	void setLock(bool bLock);
 	bool getLock(){ return m_bLock; }
+	
 };
