@@ -33,8 +33,8 @@ protected:
 public:
 	afx_msg void OnBnClickedButfilesel();	// 选择加密文件
 	afx_msg void OnBnClickedButfileout();	// 选择输出文件
-	afx_msg void OnBnClickedButenstart();	// 开始加密
 	afx_msg void OnBnClickedButtonReadKey();// 读取秘钥
+	afx_msg void OnBnClickedButenstart();	// 开始加密
 	afx_msg void OnBnClickedButzip();		// 对PNG图片压缩
 public:
 
@@ -49,17 +49,24 @@ public:
 
 	// 检查文件路径是否都设置
 	void CheckFilePath();
-	void CopyAllFile();
 
 	// 获得选择文件
 	void UpdateSelFile();
 
+	// 输出文件
+	void UpdateOutFile();
+
+	BOOL IsDirectory(LPCTSTR pstrPath);
+	BOOL CopyFolder(LPCTSTR pstrSrcFolder, LPCTSTR pstrDstFolder);
+
+	aes_key m_key;				// 加密秘钥
+
 private:
 	std::string m_selFilePath;		// 原始文件路径
-	std::string m_zipFilePath;		// 压缩文件路径
-	std::string m_selFileOutPath;	// 加密后输出文件路径
+	std::string m_zipFilePath;		// 压缩文件输出路径
+	std::string m_selFileOutPath;	// 输出文件路径
+	std::string m_enFileOutPath;	// 加密后输出文件路径
 	std::string m_exePath;			// 当前程序路径
-	aes_key m_key;				// 加密秘钥
 
 	std::vector< std::string > m_vecPngFiles;		// 原始图片列表，未加密
 	std::vector< std::string > m_vecAllFiles;		// 原始图片列表，未加密
@@ -68,8 +75,17 @@ private:
 	CEdit*      m_pMinEdit;
 	CEdit*      m_pMaxEdit;
 	CEdit*      m_pSelFileEdit;
+	CEdit*      m_pOutFileEdit;
+
+	bool m_bLock;		// 锁定输入
 public:
 	afx_msg void OnEnKillfocusEditmaxbox();
 	afx_msg void OnEnKillfocusEditminbox();
 	afx_msg void OnEnKillfocusEdit();
+	afx_msg void OnEnKillfocusEditout();
+	afx_msg void OnBnClickedButcopy();
+	afx_msg void OnBnClickedCheckLock();
+
+	void setLock(bool bLock);
+	bool getLock(){ return m_bLock; }
 };

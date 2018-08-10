@@ -74,6 +74,9 @@ BEGIN_MESSAGE_MAP(CEncryptImageToolDlg, CDialogEx)
 	ON_EN_KILLFOCUS(IDC_EDITMAXBOX, &CEncryptImageToolDlg::OnEnKillfocusEditmaxbox)
 	ON_EN_KILLFOCUS(IDC_EDITMINBOX, &CEncryptImageToolDlg::OnEnKillfocusEditminbox)
 	ON_EN_KILLFOCUS(IDC_EDIT, &CEncryptImageToolDlg::OnEnKillfocusEdit)
+	ON_EN_KILLFOCUS(IDC_EDITOUT, &CEncryptImageToolDlg::OnEnKillfocusEditout)
+	ON_BN_CLICKED(IDC_BUTCOPY, &CEncryptImageToolDlg::OnBnClickedButcopy)
+	ON_BN_CLICKED(IDC_CHECKLOCK, &CEncryptImageToolDlg::OnBnClickedCheckLock)
 END_MESSAGE_MAP()
 
 
@@ -112,15 +115,28 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 	m_selFilePath = "";
 	m_selFileOutPath = "";
 	m_zipFilePath = "";
+	m_enFileOutPath = "";
 	m_exePath = Tool::curdir();
 
-	clear(m_key);
+	// 设置key
+	m_key = Tool::SECRET_KEY;
+
+	char c;
+	int count = 0;
+	std::string strKey ="秘钥为：";
+	while (m_key[count])
+	{
+		//infile >> c;
+		c= m_key[count];
+		strKey += c;
+		count++;
+	}
+
+	GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(CString(strKey.c_str()));
+
 	m_vecPngFiles.clear();
 	m_vecZipPngFiles.clear();
 	m_vecAllFiles.clear();
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
-
-	CheckFilePath();
 
 	m_pMinEdit = (CEdit*)GetDlgItem(IDC_EDITMINBOX);
 	m_pMinEdit->SetWindowTextW(_T("65"));
@@ -133,10 +149,14 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 
 	m_pSelFileEdit = (CEdit*)GetDlgItem(IDC_EDIT);
 
+	m_pOutFileEdit = (CEdit*)GetDlgItem(IDC_EDITOUT);
+
 	std::string logPath = Tool::curdir() + "\\log.txt";
 	std::fstream file(logPath, std::ios::out);		// 清空文件
 
-
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(FALSE);
+	GetDlgItem(IDC_BUTZIP)->EnableWindow(FALSE);
+	GetDlgItem(IDC_BUTCOPY)->EnableWindow(FALSE);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -195,42 +215,57 @@ HCURSOR CEncryptImageToolDlg::OnQueryDragIcon()
 void CEncryptImageToolDlg::OnBnClickedButfilesel()
 {
 	// TODO:  选择加密文件
-	auto filePath = CSelectFolderDlg::Show();
+	CString filePath = CSelectFolderDlg::Show();
 
-	GetDlgItem(IDC_SEL_FILETXT)->SetWindowTextW(filePath);
-	GetDlgItem(IDC_EDIT)->SetWindowText(filePath);
+	GetDlgItem(IDC_SEL_FILETXT)->SetWindowText(filePath);
+
+	m_pSelFileEdit->SetWindowText(filePath);
 	
 	m_selFilePath = CT2CA(filePath.GetBuffer(0));
 
-	UpdateSelFile();
+	if (getLock())		// 锁定不能操作
+	{
+		return;
+	}
+
+	if (filePath.IsEmpty())
+	{
+		return;
+	}
+
 }
 
 
 void CEncryptImageToolDlg::OnBnClickedButfileout()
 {
 	// TODO:  选择加密输出文件
-	auto outFile = CSelectFolderDlg::Show();
+	CString outFile = CSelectFolderDlg::Show();
 
 	GetDlgItem(IDC_FILE_OUT)->SetWindowTextW(outFile);
 	m_selFileOutPath = CT2CA(outFile.GetBuffer(0));
 
+	m_pOutFileEdit->SetWindowText(outFile);
 
-	int lastpos = m_selFileOutPath.find_last_of("\\");
-	m_zipFilePath = m_selFileOutPath.substr(0, lastpos);
+	if (getLock())		// 锁定不能操作
+	{
+		return;
+	}
 
-	m_zipFilePath = m_zipFilePath + "\\PNGZipFiles";
+	if (outFile.IsEmpty())
+	{
+		return;
+	}
 
-
-	CheckFilePath();
-	CopyAllFile();
+	UpdateOutFile();
 }
 
 
 void CEncryptImageToolDlg::OnBnClickedButenstart()
 {
-	// TODO:  开始加密
-	SetBtnState(false); 
-
+	if (!getLock())
+	{
+		return;
+	}
 	// 
 	int count = 0;	// 当前操作文件数量
 	int enCount = 0;	// 可加密数量
@@ -255,7 +290,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	}
 	
 	Tool::EnToolLog("========加密输出====================");
-	Tool::EnToolLog("========加密输出 : " + m_selFileOutPath);
+	Tool::EnToolLog("========加密输出 : " + m_enFileOutPath);
 
 
 	// 开始加密文件
@@ -263,7 +298,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	{
 		Tool::EnToolLog("[encryFile] 待加密文件： " + filename);
 		fileState = "";
-		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath, m_selFileOutPath);
+		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath, m_enFileOutPath);
 
 		fileState += filename;
 		if ( state == 0)
@@ -301,49 +336,59 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	SetBtnState(true);
 
 	// 加密完成恢复状态
-	GetDlgItem(IDC_BUTZIP)->EnableWindow(1);
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(0);
+	//GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(FALSE);
+
+	MessageBoxA(NULL, LPCSTR("加密完成，欢迎使用!"), NULL, MB_OK);
 }
 
 void CEncryptImageToolDlg::SetBtnState(bool enable)
 {
 	GetDlgItem(IDC_BUTFILESEL)->EnableWindow(enable);
-	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable);
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
+	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable)
+		;
+	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTTONKEY)->EnableWindow(enable);
+
+	GetDlgItem(IDC_CHECKLOCK)->EnableWindow(enable);
+
+	m_pSelFileEdit->SetReadOnly(!enable);
+	m_pOutFileEdit->SetReadOnly(!enable);
+	m_pMinEdit->SetReadOnly(!enable);
+	m_pMaxEdit->SetReadOnly(!enable);
 }
 
 void CEncryptImageToolDlg::ReadImageKey()
 {
 	// TODO:  读取秘钥
-	auto key_path = CSelectFolderDlg::BootOpenDialog();
+	//auto key_path = CSelectFolderDlg::BootOpenDialog();
 
-	std::ifstream infile;
-	infile.open(key_path);   //将文件流对象与文件连接起来 
-	if (!infile.is_open())   //若失败,则输出错误消息,并终止程序运行 
-	{
-		std::cout << "==== 秘钥读取失败" << std::endl;
-		GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(_T("读取秘钥失败"));
-		return;
-	}
+	//std::ifstream infile;
+	//infile.open(key_path);   //将文件流对象与文件连接起来 
+	//if (!infile.is_open())   //若失败,则输出错误消息,并终止程序运行 
+	//{
+	//	std::cout << "==== 秘钥读取失败" << std::endl;
+	//	GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(_T("读取秘钥失败"));
+	//	return;
+	//}
 
-	char c;
-	int count = 0;
-	std::string strKey ="秘钥为：";
-	while (infile >> c)
-	{
-		//infile >> c;
-		m_key[count] = c;
-		strKey += c;
-		count++;
+	//char c;
+	//int count = 0;
+	//std::string strKey ="秘钥为：";
+	//while (infile >> c)
+	//{
+	//	//infile >> c;
+	//	m_key[count] = c;
+	//	strKey += c;
+	//	count++;
 
-	}
-	//关闭文件输入流 
-	infile.close();
+	//}
+	////关闭文件输入流 
+	//infile.close();
 
-	Tool::EnToolLog(strKey);
+	//Tool::EnToolLog(strKey);
 
-	GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(CString(strKey.c_str()));
+	//GetDlgItem(IDC_KEYTEXT)->SetWindowTextW(CString(strKey.c_str()));
 
 }
 
@@ -403,64 +448,21 @@ void CEncryptImageToolDlg::CheckFilePath()
 	if (m_selFilePath.empty())
 	{
 		bSet = false;
+		MessageBoxA(NULL, LPCSTR("请选择待加密文件夹!"), NULL, MB_OK);
 	}
 	if ( m_selFileOutPath.empty())
 	{
 		bSet = false;
+		MessageBoxA(NULL, LPCSTR("请选择输出文件夹!"), NULL, MB_OK);
 	}
 
 	if ( m_key.empty())
 	{
 		bSet = false;
+		MessageBoxA(NULL, LPCSTR("秘钥未设置!"), NULL, MB_OK);
 	}
 
-	if ( bSet )
-	{
-		GetDlgItem(IDC_BUTZIP)->EnableWindow(1);		// 压缩按钮不可点击
-	}
-	else
-	{
-		GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
-	}
-
-}
-
-void CEncryptImageToolDlg::CopyAllFile()
-{
-	Tool::EnToolLog("=== 复制文件到输出目录 ===");
-	for (auto &filename : m_vecAllFiles)
-	{
-		// 取出相对路径
-		auto outFile = filename.substr(m_selFilePath.size(), filename.size());
-		// 绝对路径
-		std::string out_path = m_selFileOutPath + outFile;
-		
-		if (Tool::filedir(out_path) == -1 )
-		{
-			Tool::EnToolLog("[error] 创建复制文件夹失败 " + filename);
-			continue;
-		}
-
-// 		int lastPos = out_path.find_last_of("\\");
-// 		if (lastPos != std::string::npos)
-// 		{
-// 			out_path = out_path.substr(0, lastPos);
-// 		}
-
-		Tool::EnToolLog("[copy] 复制文件 " + out_path);
-		//lstrcpy(LPWSTR(filename.c_str()), LPCWSTR(out_path.c_str()));
-		if (CopyFile(LPCWSTR(filename.c_str()), LPCWSTR(out_path.c_str()), FALSE))
-		{
-			Tool::EnToolLog("[suc] 复制文件成功 " + filename);
-		}
-		else{
-			int nError = GetLastError();
-
-			Tool::EnToolLog("[error] 复制文件失败 " + filename);
-		}
-	}
-
-	Tool::EnToolLog("===== 复制完成 =====");
+	setLock(bSet);
 
 }
 
@@ -480,20 +482,28 @@ void CEncryptImageToolDlg::UpdateSelFile()
 	m_vecAllFiles.clear();
 	m_vecAllFiles = Tool::getAllFiles(m_selFilePath);
 
+}
 
-	CheckFilePath();
+void CEncryptImageToolDlg::UpdateOutFile()
+{
+	m_zipFilePath = m_selFileOutPath + "\\PNGZipFiles";
+	m_enFileOutPath = m_selFileOutPath + "\\EnFiles";
 }
 
 void CEncryptImageToolDlg::OnBnClickedButtonReadKey()
 {
 	// TODO:  读取秘钥按钮
 	ReadImageKey();
-	CheckFilePath();
 }
 
 
 void CEncryptImageToolDlg::OnBnClickedButzip()
 {
+	if (!getLock())
+	{
+		return;
+	}
+
 	// TODO:  压缩PNG文件
 	int maxCount = m_vecPngFiles.size();
 
@@ -504,7 +514,6 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 	int zPos = 0;
 
 	// 加密详细情况列表
-	std::string zipFile = "";
 	CListBox *List;
 	List = (CListBox*)GetDlgItem(IDC_LISTCONTROL);
 	List->ResetContent();
@@ -546,34 +555,34 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 	int count = 1;
 	for (auto &filename : m_vecPngFiles)
 	{
+		std::string zipFile = "";
+		int zipState = ImageZipPng(filename, minQua, maxQua);
+
 		char buff[256];
 		sprintf_s(buff, "压缩 (%d/%d) ", count, maxCount);
+
 		zipFile += buff;
 
 		zipFile += filename;
-
-		int zipState = ImageZipPng(filename, minQua, maxQua);
 		
 		if ( zipState == 0)
 		{
 			zipFile += "==> 压缩完成";
 		}
 		else{
-			zipFile += "==> 压缩完成";
+			zipFile += "==> 压缩失败";
 		}
-		List->AddString(CString(zipFile.c_str()));
-
-
 		zPos = count / maxCount * 100;
+		++count;
 		pProg->SetPos(zPos);
 
-		count++;
+		List->AddString(CString(zipFile.c_str()));
+
 	}
 
 	List->AddString(_T("======压缩PNG完成======"));
 
-	GetDlgItem(IDC_BUTZIP)->EnableWindow(0);		// 压缩按钮不可点击
-	GetDlgItem(IDC_BUTENSTART)->EnableWindow(1);	// 压缩完成可以加密
+	GetDlgItem(IDC_BUTZIP)->EnableWindow(FALSE);		// 压缩按钮不可点击
 
 
 	// 读取待加密文件
@@ -587,6 +596,9 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 			m_vecZipPngFiles.push_back(filename);
 		}
 	}
+	MessageBoxA(NULL, LPCSTR("文件压缩完成可进行加密操作"), NULL, MB_OK);
+
+	GetDlgItem(IDC_BUTENSTART)->EnableWindow(TRUE);	// 压缩完成可以加密
 }
 
 void CEncryptImageToolDlg::OnEnKillfocusEditmaxbox()
@@ -635,9 +647,215 @@ void CEncryptImageToolDlg::OnEnKillfocusEdit()
 {
 	CString eStr;
 	m_pSelFileEdit->GetWindowTextW(eStr);
-	std::string outFiles = CT2CA( eStr.GetBuffer(0) );
+	std::string selFiles = CT2CA( eStr.GetBuffer(0) );
+
+	m_selFileOutPath = selFiles;
+
+	if (!PathIsDirectory(eStr))
+	{
+		//MessageBoxA(NULL, LPCSTR("所输入正确加密路径!"), NULL, MB_OK);
+		return;
+	}
+
+}
+
+// 输出加密文件 输入框
+void CEncryptImageToolDlg::OnEnKillfocusEditout()
+{
+	CString eStr;
+	m_pOutFileEdit->GetWindowText(eStr);
+	std::string outFiles = CT2CA(eStr.GetBuffer(0));
+
 	m_selFileOutPath = outFiles;
 
+	if (!PathIsDirectory(eStr))
+	{
+		//MessageBoxA(NULL, LPCSTR("所输入正确加密输出路径!"), NULL, MB_OK);
+		return;
+	}
+
+	if (eStr.IsEmpty())
+	{
+		return;
+	}
+
+	UpdateOutFile();
+
+}
+
+/*复制目录中的所有内容*/
+BOOL CEncryptImageToolDlg::CopyFolder(LPCTSTR pstrSrcFolder, LPCTSTR pstrDstFolder)
+{
+	if ((NULL == pstrSrcFolder) || (NULL == pstrSrcFolder))
+	{
+		return FALSE;
+	}
+
+	/*检查源目录是否是合法目录*/
+	if (!IsDirectory(pstrSrcFolder))
+	{
+		return FALSE;
+	}
+
+	/*把文件名称转换为CString类型，并确认目录的路径末尾为反斜杠*/
+	CString strSrcFolder(pstrSrcFolder);
+	if (strSrcFolder.Right(1) != _T('\\'))
+	{
+		strSrcFolder += _T("\\");
+	}
+	CString strDstFolder(pstrDstFolder);
+	if (strDstFolder.Right(1) != _T("\\"))
+	{
+		strDstFolder += _T("\\");
+	}
+
+	/*如果是目录自身复制，直接返回复制成功*/
+	if (0 == _tcscmp(strSrcFolder, strDstFolder))
+	{
+		return TRUE;
+	}
+
+	/*如果目的目录不存在,则创建目录*/
+	if (!IsDirectory(strDstFolder))
+	{
+		if (!CreateDirectory(strDstFolder, NULL))
+		{
+			/*创建目的目录失败*/
+			return FALSE;
+		}
+	}
+
+	/*创建源目录中查找文件的通配符*/
+	CString strWildcard(strSrcFolder);
+	strWildcard += _T("*.*");
+
+	/*打开文件查找，查看源目录中是否存在匹配的文件*/
+	/*调用FindFile后，必须调用FindNextFile才能获得查找文件的信息*/
+	CFileFind finder;
+	BOOL bWorking = finder.FindFile(strWildcard);
+
+	while (bWorking)
+	{
+		/*查找下一个文件*/
+		bWorking = finder.FindNextFile();
+
+		/*跳过当前目录“.”和上一级目录“..”*/
+		if (finder.IsDots())
+		{
+			continue;
+		}
+
+		/*得到当前要复制的源文件的路径*/
+		CString strSrcFile = finder.GetFilePath();
+
+		/*得到要复制的目标文件的路径*/
+		CString strDstFile(strDstFolder);
+		strDstFile += finder.GetFileName();
+
+		/*判断当前文件是否是目录,*/
+		/*如果是目录，递归调用复制目录,*/
+		/*否则，直接复制文件*/
+		if (finder.IsDirectory())
+		{
+			if (!CopyFolder(strSrcFile, strDstFile))
+			{
+				finder.Close();
+				return FALSE;
+			}
+		}
+		else
+		{
+			if (!CopyFile(strSrcFile, strDstFile, FALSE))
+			{
+				finder.Close();
+				return FALSE;
+			}
+		}
+
+	} /*while (bWorking)*/
+
+	/*关闭文件查找*/
+	finder.Close();
+
+	return TRUE;
+
+}
+
+/*判断一个路径是否是已存在的目录*/
+BOOL CEncryptImageToolDlg::IsDirectory(LPCTSTR pstrPath)
+{
+	if (NULL == pstrPath)
+	{
+		return FALSE;
+	}
+
+	/*去除路径末尾的反斜杠*/
+	CString strPath = pstrPath;
+	if (strPath.Right(1) == _T('\\'))
+	{
+		strPath.Delete(strPath.GetLength() - 1);
+	}
+
+	CFileFind finder;
+	BOOL bRet = finder.FindFile(strPath);
+	if (!bRet)
+	{
+		return FALSE;
+	}
+
+	/*判断该路径是否是目录*/
+	finder.FindNextFile();
+	bRet = finder.IsDirectory();
+	finder.Close();
+	return bRet;
+}
+
+
+void CEncryptImageToolDlg::OnBnClickedButcopy()
+{
+
+	if (!getLock())
+	{
+		return;
+	}
+	// TODO:  开始加密
+	SetBtnState(false);
+
+	// 先设置选择文件
 	UpdateSelFile();
 
+	// 复制文件
+
+	CString selPath;
+	selPath = (CString)m_selFilePath.c_str();
+
+	CString outPath;
+	outPath = (CString)m_enFileOutPath.c_str();
+
+	if (CopyFolder( (LPCTSTR)selPath, (LPCTSTR)outPath) )		// 拷贝成功
+	{
+		MessageBoxA(NULL, LPCSTR("复制成功，可进行压缩、加密！"), NULL, MB_OK);
+		GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
+		GetDlgItem(IDC_BUTCOPY)->EnableWindow(FALSE);
+	}
+	else{		// 拷贝失败
+		MessageBoxA(NULL, LPCSTR("文件复制失败"), NULL, MB_OK);
+	}
+}
+
+
+void CEncryptImageToolDlg::OnBnClickedCheckLock()
+{
+	bool bCheck = (this->IsDlgButtonChecked(IDC_CHECKLOCK) == 1);
+	setLock(bCheck);
+	CheckFilePath();
+
+}
+
+void CEncryptImageToolDlg::setLock(bool bLock)
+{
+	m_bLock = bLock;
+
+	this->CheckDlgButton(IDC_CHECKLOCK, bLock);
+	GetDlgItem(IDC_BUTCOPY)->EnableWindow(bLock);
 }

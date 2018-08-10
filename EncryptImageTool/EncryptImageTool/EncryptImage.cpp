@@ -56,7 +56,7 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 	WriteFileData(filename, out_file, block_info);
 
 	// 记录起始位置
-	uint64_t pos = out_file.tellp();
+	uint32_t pos = htonl((uint32_t)out_file.tellp());
 	char *user_data = reinterpret_cast<char *>(&pos);
 
 	// 数据块信息加密
@@ -64,7 +64,7 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 
 	// 写入数据块信息
 	Tool::StreamMove(out_file, block_info, uint32_t(block_info.tellp() - block_info.tellg()));
-	for (unsigned int i = 0; i < sizeof(uint64_t); ++i) out_file.put(user_data[i]);
+	for (unsigned int i = 0; i < sizeof(uint32_t); ++i) out_file.put(user_data[i]);
 
 	std::cout << "==>加密完成：" << out_path.c_str() << std::endl;
 
@@ -107,7 +107,8 @@ void CEncryptImage::WriteFileData(const std::string &filename, std::ofstream &ou
 
 		// 数据块信息
 		block.size = block_size;
-		block.pos = outstream.tellp();
+		block.pos = htonl((uint32_t)outstream.tellp());;
+		//block.pos = outstream.tellp();
 		memcpy(block.name, &block_name[0], sizeof(block.name));
 
 		// 根据数据类型进行处理
@@ -130,7 +131,7 @@ void CEncryptImage::WriteFileData(const std::string &filename, std::ofstream &ou
 		}
 	}
 
-	file.close();
+	//file.close();
 }
 
 
@@ -149,14 +150,16 @@ int CEncryptImage::EnFile(std::string filename, const aes_key &key)
 	}
 
 	// 读取数据块位置
-	uint64_t end_pos = in_file.tellg();
-	in_file.seekg(end_pos - sizeof(uint64_t));
-	uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(Tool::ReadSome<sizeof(uint64_t)>(in_file)[0]));
+	uint32_t end_pos = in_file.tellg();
+	in_file.seekg(end_pos - sizeof(BLOCK_HEAD));
+	uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(&(Tool::ReadSome<sizeof(BLOCK_HEAD)>(in_file)[0]));
 	in_file.seekg(block_start_pos);
 
-	// 解密数据块信息
-	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t)-block_start_pos));
+	
+	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(BLOCK_HEAD)-block_start_pos));
 	std::string sssaasd = block_info.str();
+
+	// 解密数据块信息
 	Tool::DecryptBlock(block_info, key);
 
 	// 验证数据块内容
