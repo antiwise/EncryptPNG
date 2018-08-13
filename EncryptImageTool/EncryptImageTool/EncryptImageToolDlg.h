@@ -80,6 +80,7 @@ private:
 	CEdit*      m_pOutFileEdit;
 
 	bool m_bLock;		// 锁定输入
+	bool m_bZip;		// 是否需要压缩
 public:
 	afx_msg void OnEnKillfocusEditmaxbox();
 	afx_msg void OnEnKillfocusEditminbox();
@@ -91,5 +92,8 @@ public:
 
 	void setLock(bool bLock);
 	bool getLock(){ return m_bLock; }
-	
+
+	void setZip(bool bZip);
+	bool getZip(){ return m_bZip; }
+	afx_msg void OnBnClickedCheckzip();
 };

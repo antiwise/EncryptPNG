@@ -79,6 +79,7 @@ BEGIN_MESSAGE_MAP(CEncryptImageToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTCOPY, &CEncryptImageToolDlg::OnBnClickedButcopy)
 	ON_BN_CLICKED(IDC_CHECKLOCK, &CEncryptImageToolDlg::OnBnClickedCheckLock)
 	ON_BN_CLICKED(IDC_BUTDE, &CEncryptImageToolDlg::OnBnClickedButde)
+	ON_BN_CLICKED(IDC_CHECKZIP, &CEncryptImageToolDlg::OnBnClickedCheckzip)
 END_MESSAGE_MAP()
 
 
@@ -167,6 +168,9 @@ BOOL CEncryptImageToolDlg::OnInitDialog()
 #else
 	GetDlgItem(IDC_BUTDE)->ShowWindow(FALSE);
 #endif
+
+	setLock(false);
+	setZip(true);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -276,6 +280,23 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	{
 		return;
 	}
+
+	// 读取待加密文件
+	m_vecZipPngFiles.clear();
+	std::string zipFilePath = m_zipFilePath;
+	if (getZip() == false)		// 不需要压缩  读取原始文件开始加密
+	{
+		zipFilePath = m_selFilePath;
+	}
+	auto allFiles = Tool::walk(zipFilePath);
+	for (auto filename : allFiles)
+	{
+		if (Tool::splitext(filename)[1] == ".png")
+		{
+			m_vecZipPngFiles.push_back(filename);
+		}
+	}
+
 	// 
 	int count = 0;	// 当前操作文件数量
 	int enCount = 0;	// 可加密数量
@@ -308,7 +329,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 	{
 		Tool::EnToolLog("[encryFile] 待加密文件： " + filename);
 		fileState = "";
-		int state = CEncryptImage::EncryptPNG(filename, m_key, m_zipFilePath, m_enFileOutPath);
+		int state = CEncryptImage::EncryptPNG(filename, m_key, zipFilePath, m_enFileOutPath);
 
 		fileState += filename;
 		if ( state == 0)
@@ -344,6 +365,7 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 
 	// 加密完成
 	SetBtnState(true);
+	GetDlgItem(IDC_CHECKLOCK)->EnableWindow(TRUE);
 
 	// 加密完成恢复状态
 	//GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
@@ -356,12 +378,10 @@ void CEncryptImageToolDlg::OnBnClickedButenstart()
 void CEncryptImageToolDlg::SetBtnState(bool enable)
 {
 	GetDlgItem(IDC_BUTFILESEL)->EnableWindow(enable);
-	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable)
-		;
+	GetDlgItem(IDC_BUTFILEOUT)->EnableWindow(enable);
 	//GetDlgItem(IDC_BUTENSTART)->EnableWindow(enable);
 	GetDlgItem(IDC_BUTTONKEY)->EnableWindow(enable);
-
-	GetDlgItem(IDC_CHECKLOCK)->EnableWindow(enable);
+	GetDlgItem(IDC_CHECKZIP)->EnableWindow(enable);
 
 	m_pSelFileEdit->SetReadOnly(!enable);
 	m_pOutFileEdit->SetReadOnly(!enable);
@@ -601,18 +621,6 @@ void CEncryptImageToolDlg::OnBnClickedButzip()
 
 	GetDlgItem(IDC_BUTZIP)->EnableWindow(FALSE);		// 压缩按钮不可点击
 
-
-	// 读取待加密文件
-	m_vecZipPngFiles.clear();
-	std::string zipFilePath = m_zipFilePath;
-	auto allFiles = Tool::walk(zipFilePath);
-	for (auto filename : allFiles)
-	{
-		if (Tool::splitext(filename)[1] == ".png")
-		{
-			m_vecZipPngFiles.push_back(filename);
-		}
-	}
 	//MessageBoxA(NULL, LPCSTR("文件压缩完成可进行加密操作"), NULL, MB_OK);
 	MessageBox(_T("文件压缩完成可进行加密操作"), _T("压缩完成"), MB_OK | MB_ICONINFORMATION);
 
@@ -857,7 +865,8 @@ void CEncryptImageToolDlg::OnBnClickedButcopy()
 		return;
 	}
 	// TODO:  开始加密
-	SetBtnState(false);
+
+	GetDlgItem(IDC_CHECKLOCK)->EnableWindow(FALSE);
 
 	// 先设置选择文件
 	UpdateSelFile();
@@ -874,7 +883,13 @@ void CEncryptImageToolDlg::OnBnClickedButcopy()
 	{
 		//MessageBoxA(NULL, LPCSTR("复制成功，可进行压缩、加密！"), NULL, MB_OK);
 		MessageBox(_T("复制成功，可进行压缩、加密！"), _T("复制完成"), MB_OK | MB_ICONINFORMATION);
-		GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
+		if (getZip())
+		{
+			GetDlgItem(IDC_BUTZIP)->EnableWindow(TRUE);
+		}
+		else{
+			GetDlgItem(IDC_BUTENSTART)->EnableWindow(TRUE);
+		}
 		GetDlgItem(IDC_BUTCOPY)->EnableWindow(FALSE);
 	}
 	else{		// 拷贝失败
@@ -888,7 +903,10 @@ void CEncryptImageToolDlg::OnBnClickedCheckLock()
 {
 	bool bCheck = (this->IsDlgButtonChecked(IDC_CHECKLOCK) == 1);
 	setLock(bCheck);
-	CheckFilePath();
+	if (bCheck == true)
+	{
+		CheckFilePath();
+	}
 
 }
 
@@ -898,8 +916,15 @@ void CEncryptImageToolDlg::setLock(bool bLock)
 
 	this->CheckDlgButton(IDC_CHECKLOCK, bLock);
 	GetDlgItem(IDC_BUTCOPY)->EnableWindow(bLock);
+	SetBtnState(!bLock);
 }
 
+
+void CEncryptImageToolDlg::setZip(bool bZip)
+{
+	m_bZip = bZip;
+	this->CheckDlgButton(IDC_CHECKZIP, bZip);
+}
 
 // 解密
 void CEncryptImageToolDlg::OnBnClickedButde()
@@ -963,4 +988,14 @@ void CEncryptImageToolDlg::OnBnClickedButde()
 		Tool::EnToolLog("解密失败！！！！！");
 		MessageBox(_T("解密失败！请查看log文件"), _T("解密失败"), MB_OK | MB_ICONERROR);
 	}
+}
+
+
+
+void CEncryptImageToolDlg::OnBnClickedCheckzip()
+{
+	// TODO:  在此添加控件通知处理程序代码
+
+	bool bCheck = (this->IsDlgButtonChecked(IDC_CHECKZIP) == 1);
+	setZip(bCheck);
 }

@@ -43,7 +43,7 @@ int CDecrypt::DecryptPNG(std::string &filename, const aes_key &key, std::string 
 	in_file.seekg(block_start_pos);
 
 	// 解密数据块信息
-	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t)-block_start_pos));
+	auto block_info = Tool::ReadLarge(in_file, uint64_t(end_pos - sizeof(uint64_t)-block_start_pos));
 	std::string sssaasd = block_info.str();
 	Tool::DecryptBlock(block_info, key);
 
@@ -71,12 +71,12 @@ int CDecrypt::DecryptPNG(std::string &filename, const aes_key &key, std::string 
 	Tool::WriteToSteam(HEAD_DATA, sizeof(HEAD_DATA), out_file);
 
 	// 读取数据块
-	uint64_t read_size = 0;
+	//uint64_t read_size = 0;
 	while (true)
 	{
 		// 读取数据块信息
 		Block block;
-		memcpy(&block, &Tool::ReadSome<sizeof(Block)>(block_info)[0], sizeof(Block));
+		memcpy(&block, &(Tool::ReadSome<sizeof(Block)>(block_info)[0]), sizeof(Block));
 		if (block_info.eof())
 		{
 			out_file.clear();
@@ -111,9 +111,10 @@ int CDecrypt::DecryptPNG(std::string &filename, const aes_key &key, std::string 
 		}
 		else
 		{
-			in_file.seekg(read_size);
+			//in_file.seekg(read_size);
+			in_file.seekg(block.pos);
 			Tool::StreamMove(out_file, in_file, block.size + CRC_SIZE);
-			read_size += block.size + CRC_SIZE;
+			//read_size += block.size + CRC_SIZE;
 		}
 	}
 	Tool::EnToolLog("[de finished]"+filename);
@@ -148,16 +149,18 @@ int CDecrypt::DeFile(std::string filename, const aes_key &key)
 	Tool::DecryptBlock(block_info, key);
 
 	// 验证数据块内容
+	
 	auto block_head = Tool::ReadSome<sizeof(BLOCK_HEAD)>(block_info);
 	for (unsigned int i = 0; i < block_head.size(); ++i)
 	{
 		// 和加密头做比较  测试图片是否是加密的图片
-		if (block_head[i] == BLOCK_HEAD[i])
+		if (block_head[i] != BLOCK_HEAD[i])
 		{
-			return 1;		// 已经加密
+			return 2;		// 未加密
 		}
-		return 2;
+
 	}
 
-	return 2;
+	// 加密
+	return 1;
 }
