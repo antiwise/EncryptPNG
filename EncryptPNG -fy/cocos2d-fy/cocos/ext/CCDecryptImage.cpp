@@ -1,4 +1,4 @@
-﻿#include "CCDecryptImage.h"
+#include "CCDecryptImage.h"
 
 #include <sstream>
 #include "ccMacros.h"
@@ -84,11 +84,11 @@ namespace ext
 		CCAssert(!data.isNull(), "data is null!");
 
 		// 获取数据块信息位置
-		const uint32_t block_start_pos = ntohl(*reinterpret_cast<uint32_t *>(data.getBytes() + data.getSize() - sizeof(uint32_t)));
+		const uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(data.getBytes() + data.getSize() - sizeof(uint64_t));
 
 		// 获取数据块信息
 		std::stringstream block_info;
-		for (uint32_t i = block_start_pos; i < data.getSize() - sizeof(uint32_t); ++i)
+		for (uint64_t i = block_start_pos; i < data.getSize() - sizeof(uint64_t); ++i)
 		{
 			block_info.put(*(data.getBytes() + i));
 		}
@@ -100,15 +100,15 @@ namespace ext
 		auto block_head = ReadSome<sizeof(BLOCK_HEAD)>(block_info);
 		for (unsigned int i = 0; i < block_head.size(); ++i)
 		{
-			if (block_head[i] == BLOCK_HEAD[i])
+			if (block_head[i] != BLOCK_HEAD[i])
 			{
-				// 是加密的文件
-				return true;
+				// 未加密文件
+				return false;
 			}
 		}
 		
-		// 未加密文件
-		return false;
+		// 加密文件
+		return true;
 		
 	}
 
@@ -116,9 +116,26 @@ namespace ext
     std::vector<unsigned char> DecryptImage(const std::string &filename, cocos2d::Data &data)
 	{
 		CCAssert(!data.isNull(), "data is null!");
+		
+        
+        CCLOG("filename :%s", filename.c_str());
+		std::vector<unsigned char> image_data;
+		image_data.reserve(data.getSize());
+
+		bool bDecrypt = CheckDecrypt(data);
+		if ( !bDecrypt )		// 如果没加密
+		{
+			for (uint64_t i = 0; i < data.getSize(); ++i)
+			{
+				image_data.push_back(*(data.getBytes() + i));
+			}
+				
+			return image_data;
+			
+		}
 
 		// 获取数据块信息位置
-		const uint64_t block_start_pos = ntohl(*reinterpret_cast<uint64_t *>(data.getBytes() + data.getSize() - sizeof(uint64_t)));
+		const uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(data.getBytes() + data.getSize() - sizeof(uint64_t));
 
 		// 获取数据块信息
 		std::stringstream block_info;
@@ -127,27 +144,21 @@ namespace ext
 			block_info.put(*(data.getBytes() + i));
 		}
 		
-		bool bDecrypt = CheckDecrypt(data);
-		if ( bDecrypt )		// 判断是否加密 如果加密则解密
-		{
-			// 解密数据块信息
-			DecryptBlock(block_info, SECRET_KEY);
+		// 解密数据块信息
+		DecryptBlock(block_info, SECRET_KEY);
 
-			// 验证数据块信息是否解密成功
-			auto block_head = ReadSome<sizeof(BLOCK_HEAD)>(block_info);
-			for (unsigned int i = 0; i < block_head.size(); ++i)
+		// 验证数据块信息是否解密成功
+		auto block_head = ReadSome<sizeof(BLOCK_HEAD)>(block_info);
+		for (unsigned int i = 0; i < block_head.size(); ++i)
+		{
+			if (block_head[i] != BLOCK_HEAD[i])
 			{
-				if (block_head[i] != BLOCK_HEAD[i])
-				{
-					CCAssert(false, "the key is wrong!");
-				}
+				CCAssert(false, "the key is wrong!");
 			}
 		}
 
 
 		// 写入文件头信息
-		std::vector<unsigned char> image_data;
-		image_data.reserve(data.getSize());
 		for (auto ch : HEAD_DATA) image_data.push_back(ch);
 
 		// 写入数据块信息
@@ -167,8 +178,8 @@ namespace ext
 			for (auto ch : size_buffer) image_data.push_back(ch);
 			for (auto ch : block.name) image_data.push_back(ch);
 
-			block.pos = ntohl(block.pos);
-			block.size = ntohl(block.size);
+			//block.pos = ntohl(block.pos);
+			//block.size = ntohl(block.size);
 
 			char block_name[sizeof(block.name) + 1] = { 0 };
 			memcpy(block_name, block.name, sizeof(block.name));
@@ -187,7 +198,7 @@ namespace ext
 			}
 			else
 			{
-				for (uint32_t i = 0; i < block.size + CRC_SIZE; ++i)
+				for (uint64_t i = 0; i < block.size + CRC_SIZE; ++i)
 				{
 					image_data.push_back(*(data.getBytes() + block.pos + i));
 				}

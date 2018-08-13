@@ -1,4 +1,4 @@
-﻿#ifndef __CC_DECRYPT_IMAGE_H__
+#ifndef __CC_DECRYPT_IMAGE_H__
 #define __CC_DECRYPT_IMAGE_H__
 
 #include <array>
