@@ -37,14 +37,14 @@ int CDecrypt::DecryptPNG(std::string &filename, const aes_key &key, std::string 
 	}
 
 	// 读取数据块位置
-	uint64_t end_pos = in_file.tellg();
-	in_file.seekg(end_pos - sizeof(uint64_t));
-	uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(Tool::ReadSome<sizeof(uint64_t)>(in_file)[0]));
+	uint32_t end_pos = (uint32_t)in_file.tellg();
+	in_file.seekg(end_pos - sizeof(uint32_t));
+	uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(&(Tool::ReadSome<sizeof(uint32_t)>(in_file)[0]));
 	in_file.seekg(block_start_pos);
 
 	// 解密数据块信息
-	auto block_info = Tool::ReadLarge(in_file, uint64_t(end_pos - sizeof(uint64_t)-block_start_pos));
-	std::string sssaasd = block_info.str();
+	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint32_t)-block_start_pos));
+
 	Tool::DecryptBlock(block_info, key);
 
 	// 验证数据块内容
@@ -90,6 +90,7 @@ int CDecrypt::DecryptPNG(std::string &filename, const aes_key &key, std::string 
 		memcpy(reverse_size, &block.size, sizeof(reverse_size));
 		std::reverse(reverse_size, reverse_size + sizeof(reverse_size));
 		Tool::WriteToSteam(reverse_size, sizeof(reverse_size), out_file);
+		//Tool::WriteToSteam(&block.size, sizeof(block.size), out_file);
 
 		// 写入数据块名称
 		Tool::WriteToSteam(&block.name, sizeof(block.name), out_file);
@@ -138,14 +139,14 @@ int CDecrypt::DeFile(std::string filename, const aes_key &key)
 	}
 
 	// 读取数据块位置
-	uint64_t end_pos = in_file.tellg();
-	in_file.seekg(end_pos - sizeof(uint64_t));
-	uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(Tool::ReadSome<sizeof(uint64_t)>(in_file)[0]));
+	uint32_t end_pos = (uint32_t)in_file.tellg();
+	in_file.seekg(end_pos - sizeof(uint32_t));
+	uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(&(Tool::ReadSome<sizeof(uint32_t)>(in_file)[0]));
 	in_file.seekg(block_start_pos);
 
 	// 解密数据块信息
-	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t)-block_start_pos));
-	std::string sssaasd = block_info.str();
+	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint32_t)-block_start_pos));
+	
 	Tool::DecryptBlock(block_info, key);
 
 	// 验证数据块内容

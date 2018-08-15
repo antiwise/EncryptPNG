@@ -30,12 +30,12 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 
 
 	// 如果已经加密直接拷贝
-	if ( EnFile(filename, key) == 1)
-	{
-		//std::cerr << "--->" << filename << " 已经加密" << std::endl;
-		Tool::copy(filename, out_path);
-		return 0;
-	}
+	//if ( EnFile(filename, key) == 1)
+	//{
+	//	//std::cerr << "--->" << filename << " 已经加密" << std::endl;
+	//	Tool::copy(filename, out_path);
+	//	return 0;
+	//}
 
 	std::ofstream out_file;
 	std::stringstream block_info;
@@ -58,9 +58,7 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 
 	// 记录起始位置
 	//uint32_t pos = htonl((uint32_t)out_file.tellp());
-	uint64_t pos = out_file.tellp();
-
-	char *user_data = reinterpret_cast<char *>(&pos);
+	uint32_t pos = (uint32_t)out_file.tellp();
 	
 	// 数据块信息加密
 	Tool::EncryptBlock(block_info, key);
@@ -68,8 +66,10 @@ int CEncryptImage::EncryptPNG(const std::string filename, const aes_key &key, st
 	// 写入数据块信息
 	Tool::StreamMove(out_file, block_info, uint32_t(block_info.tellp() - block_info.tellg()));
 
-	//for (unsigned int i = 0; i < sizeof(pos); ++i) out_file.put(user_data[i]);
-	for (unsigned int i = 0; i < sizeof(uint64_t); ++i) out_file.put(user_data[i]);
+	// 写入数据块信息位置
+	char *user_data = reinterpret_cast<char *>(&pos);
+	for (unsigned int i = 0; i < sizeof(pos); ++i) out_file.put(user_data[i]);
+	//for (unsigned int i = 0; i < sizeof(uint64_t); ++i) out_file.put(user_data[i]);
 
 	//std::cout << "==>加密完成：" << out_path.c_str() << std::endl;
 	Tool::EnToolLog("[encrypt Suc ] 加密完成 " + outPath);
@@ -106,8 +106,8 @@ void CEncryptImage::WriteFileData(const std::string &filename, std::ofstream &ou
 
 		std::reverse(lenght.begin(), lenght.end());
 
-		//auto block_size = ntohl(*reinterpret_cast<uint32_t *>(&lenght[0]));
-		auto block_size = *reinterpret_cast<int *>(&lenght[0]);
+		auto block_size = *reinterpret_cast<uint32_t *>(&lenght[0]);
+		//auto block_size = *reinterpret_cast<int *>(&lenght[0]);
 
 		// 获取数据块名称
 		auto block_name = &(Tool::ReadSome<4>(file)[0]);
@@ -119,7 +119,7 @@ void CEncryptImage::WriteFileData(const std::string &filename, std::ofstream &ou
 		//block.size = htonl(block_size);
 		block.size = block_size;
 		//block.pos = htonl((uint32_t)outstream.tellp());
-		block.pos = outstream.tellp();
+		block.pos = (uint32_t) outstream.tellp();
 		memcpy(block.name, &block_name[0], sizeof(block.name));
 
 		// 根据数据类型进行处理
@@ -161,17 +161,16 @@ int CEncryptImage::EnFile(std::string filename, const aes_key &key)
 	}
 
 	// 读取数据块位置
-	//uint32_t end_pos = in_file.tellg();
-	uint64_t end_pos = in_file.tellg();
-	//in_file.seekg(end_pos - sizeof(BLOCK_HEAD));
-	in_file.seekg(end_pos - sizeof(uint64_t));
-	//uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(&(Tool::ReadSome<sizeof(BLOCK_HEAD)>(in_file)[0]));
-	uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(Tool::ReadSome<sizeof(uint64_t)>(in_file)[0]));
+	uint32_t end_pos = (uint32_t)in_file.tellg();
+	//uint64_t end_pos = in_file.tellg();
+	in_file.seekg(end_pos - sizeof(uint32_t));
+	//in_file.seekg(end_pos - sizeof(uint64_t));
+	uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(&(Tool::ReadSome<sizeof(uint32_t)>(in_file)[0]));
+	//uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(&(Tool::ReadSome<sizeof(uint64_t)>(in_file)[0]));
 	in_file.seekg(block_start_pos);
 
-	//auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(BLOCK_HEAD)-block_start_pos));
-	auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t) - block_start_pos));
-	std::string sssaasd = block_info.str();
+	std::stringstream block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint32_t)-block_start_pos));
+	//auto block_info = Tool::ReadLarge(in_file, uint32_t(end_pos - sizeof(uint64_t) - block_start_pos));
 
 	// 解密数据块信息
 	Tool::DecryptBlock(block_info, key);
