@@ -523,6 +523,15 @@ void CEncryptImageToolDlg::UpdateOutFile()
 	m_zipFilePath = m_selFileOutPath + "\\PNGZipFiles";
 	m_enFileOutPath = m_selFileOutPath + "\\EnFiles";
 	m_deFileOutPath = m_selFileOutPath + "\\DeFiles";
+
+	std::string zipPath = "压缩输出目录：";
+	zipPath += m_zipFilePath;
+
+	GetDlgItem(IDC_STATICZIP)->SetWindowText(CString(zipPath.c_str()));
+
+	std::string enPath = "加密输出目录：";
+	enPath += m_enFileOutPath;
+	GetDlgItem(IDC_STATICENCRYPT)->SetWindowText(CString(enPath.c_str()));
 }
 
 void CEncryptImageToolDlg::OnBnClickedButtonReadKey()
@@ -695,7 +704,7 @@ void CEncryptImageToolDlg::OnEnKillfocusEdit()
 	m_pSelFileEdit->GetWindowTextW(eStr);
 	std::string selFiles = CT2CA( eStr.GetBuffer(0) );
 
-	m_selFileOutPath = selFiles;
+	m_selFilePath = selFiles;
 
 	if (!PathIsDirectory(eStr))
 	{
