@@ -84,11 +84,11 @@ namespace ext
 		CCAssert(!data.isNull(), "data is null!");
 
 		// 获取数据块信息位置
-		const uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(data.getBytes() + data.getSize() - sizeof(uint64_t));
+		const uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(data.getBytes() + data.getSize() - sizeof(uint32_t));
 
 		// 获取数据块信息
 		std::stringstream block_info;
-		for (uint64_t i = block_start_pos; i < data.getSize() - sizeof(uint64_t); ++i)
+		for (uint32_t i = block_start_pos; i < data.getSize() - sizeof(uint32_t); ++i)
 		{
 			block_info.put(*(data.getBytes() + i));
 		}
@@ -125,7 +125,7 @@ namespace ext
 		bool bDecrypt = CheckDecrypt(data);
 		if ( !bDecrypt )		// 如果没加密
 		{
-			for (uint64_t i = 0; i < data.getSize(); ++i)
+			for (uint32_t i = 0; i < data.getSize(); ++i)
 			{
 				image_data.push_back(*(data.getBytes() + i));
 			}
@@ -135,11 +135,11 @@ namespace ext
 		}
 
 		// 获取数据块信息位置
-		const uint64_t block_start_pos = *reinterpret_cast<uint64_t *>(data.getBytes() + data.getSize() - sizeof(uint64_t));
+		const uint32_t block_start_pos = *reinterpret_cast<uint32_t *>(data.getBytes() + data.getSize() - sizeof(uint32_t));
 
 		// 获取数据块信息
 		std::stringstream block_info;
-		for (uint64_t i = block_start_pos; i < data.getSize() - sizeof(uint64_t); ++i)
+		for (uint32_t i = block_start_pos; i < data.getSize() - sizeof(uint32_t); ++i)
 		{
 			block_info.put(*(data.getBytes() + i));
 		}
@@ -173,9 +173,13 @@ namespace ext
 			}
 
 			// 写入数据块长度和名称
-			char size_buffer[sizeof(block.size)];
-			memcpy(size_buffer, &block.size, sizeof(size_buffer));
-			for (auto ch : size_buffer) image_data.push_back(ch);
+			//char size_buffer[sizeof(block.size)];
+			//memcpy(size_buffer, &block.size, sizeof(size_buffer));
+            char reverse_size[sizeof(block.size)];
+            memcpy(reverse_size, &block.size, sizeof(reverse_size));
+            std::reverse(reverse_size, reverse_size+sizeof(reverse_size));
+            
+			for (auto ch : reverse_size) image_data.push_back(ch);
 			for (auto ch : block.name) image_data.push_back(ch);
 
 			//block.pos = ntohl(block.pos);
@@ -198,7 +202,7 @@ namespace ext
 			}
 			else
 			{
-				for (uint64_t i = 0; i < block.size + CRC_SIZE; ++i)
+				for (uint32_t i = 0; i < block.size + CRC_SIZE; ++i)
 				{
 					image_data.push_back(*(data.getBytes() + block.pos + i));
 				}
