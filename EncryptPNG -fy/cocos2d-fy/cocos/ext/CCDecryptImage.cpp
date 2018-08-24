@@ -3,6 +3,14 @@
 #include <sstream>
 #include "ccMacros.h"
 
+/*
+* 出现这个错误提示 添加这个头文件
+* error: 'reverse' is not a member of 'std'
+*/
+// #include <algorithm>
+
+
+
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
 #include <WinSock.h>
 #pragma comment(lib, "ws2_32.lib")
